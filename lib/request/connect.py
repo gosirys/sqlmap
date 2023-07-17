@@ -976,7 +976,7 @@ class Connect(object):
         processResponse(page, responseHeaders, code, status)
 
         for info in kb.http_traffic:
-            info_str = ' '.join(['[%s] %s' % (k, setColor('{:<15}'.format(v), color)) for k, v, color in zip(info.keys(), info.values(), cycle(['red', 'green', 'blue', 'yellow', 'cyan']))])
+            info_str = ' '.join([setColor('[%s] %s' % (k, '{:<15}'.format(v)), color) for k, v, color in zip(info.keys(), info.values(), cycle(['red', 'green', 'blue', 'yellow', 'cyan']))])
             logger.info("Response: %s", info_str)
 
         if not skipLogTraffic:
@@ -1047,8 +1047,6 @@ class Connect(object):
 
         value = agent.adjustLateValues(value)
         payload = agent.extractPayload(value)
-        # logger.info("Payload: %s", payload)
-        # logger.log(CUSTOM_LOGGING.YPAY, safecharencode(payload.replace('\\', BOUNDARY_BACKSLASH_MARKER)).replace(BOUNDARY_BACKSLASH_MARKER, '\\'))
         threadData = getCurrentThreadData()
 
         if conf.httpHeaders:
