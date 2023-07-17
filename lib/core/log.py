@@ -10,7 +10,8 @@ import re
 import sys
 
 from lib.core.enums import CUSTOM_LOGGING
-
+# logging.addLevelName(CUSTOM_LOGGING.YRESP, "RESP")
+# logging.addLevelName(CUSTOM_LOGGING.YPAY, "PAYLOAD")
 logging.addLevelName(CUSTOM_LOGGING.PAYLOAD, "PAYLOAD")
 logging.addLevelName(CUSTOM_LOGGING.TRAFFIC_OUT, "TRAFFIC OUT")
 logging.addLevelName(CUSTOM_LOGGING.TRAFFIC_IN, "TRAFFIC IN")
@@ -18,6 +19,7 @@ logging.addLevelName(CUSTOM_LOGGING.TRAFFIC_IN, "TRAFFIC IN")
 LOGGER = logging.getLogger("sqlmapLog")
 
 LOGGER_HANDLER = None
+
 try:
     from thirdparty.ansistrm.ansistrm import ColorizingStreamHandler
 
@@ -103,6 +105,8 @@ try:
         LOGGER_HANDLER = logging.StreamHandler(sys.stdout)
     else:
         LOGGER_HANDLER = _ColorizingStreamHandler(sys.stdout)
+        # LOGGER_HANDLER.level_map[logging.getLevelName("YRESP")] = (None, "cyan", False)
+        # LOGGER_HANDLER.level_map[logging.getLevelName("YPAY")] = (None, "magenta", False)
         LOGGER_HANDLER.level_map[logging.getLevelName("PAYLOAD")] = (None, "cyan", False)
         LOGGER_HANDLER.level_map[logging.getLevelName("TRAFFIC OUT")] = (None, "magenta", False)
         LOGGER_HANDLER.level_map[logging.getLevelName("TRAFFIC IN")] = ("magenta", None, False)

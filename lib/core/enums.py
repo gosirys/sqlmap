@@ -108,6 +108,8 @@ class FORK(object):
     YUGABYTEDB = "YugabyteDB"
 
 class CUSTOM_LOGGING(object):
+    # YRESP = 0
+    # YPAY= 0
     PAYLOAD = 9
     TRAFFIC_OUT = 8
     TRAFFIC_IN = 7

@@ -17,6 +17,8 @@ import struct
 import sys
 import time
 import traceback
+from itertools import cycle
+
 
 try:
     import websocket
@@ -54,6 +56,7 @@ from lib.core.common import randomStr
 from lib.core.common import readInput
 from lib.core.common import removeReflectiveValues
 from lib.core.common import safeVariableNaming
+from lib.core.common import setColor
 from lib.core.common import singleTimeLogMessage
 from lib.core.common import singleTimeWarnMessage
 from lib.core.common import stdev
@@ -920,6 +923,28 @@ class Connect(object):
                 else:
                     page = getUnicode(page)
 
+            # Calculate the time taken
+            time_taken = time.time() - start
+            # only keep first 2 decimal places
+            time_taken = round(time_taken, 4)
+            
+            # Calculate the response details
+            content_length = len(page)
+            status_code = code
+            num_words = len(page.split())
+            num_lines = len(page.split('\n'))
+
+            kb.http_traffic = []
+
+            # Store the response details
+            kb.http_traffic.append({
+                'CL': content_length,
+                'SC': status_code,
+                'W': num_words,
+                'L': num_lines,
+                'TTL': time_taken
+            })
+
             for function in kb.postprocessFunctions:
                 try:
                     page, responseHeaders, code = function(page, responseHeaders, code)
@@ -933,6 +958,7 @@ class Connect(object):
                     errMsg = "aborting due to detected HTTP code '%d'" % _
                     singleTimeLogMessage(errMsg, logging.CRITICAL)
                     raise SystemExit
+
 
             threadData.lastPage = page
             threadData.lastCode = code
@@ -948,6 +974,10 @@ class Connect(object):
                     return Connect._retryProxy(**kwargs)
 
         processResponse(page, responseHeaders, code, status)
+
+        for info in kb.http_traffic:
+            info_str = ' '.join(['[%s] %s' % (k, setColor('{:<15}'.format(v), color)) for k, v, color in zip(info.keys(), info.values(), cycle(['red', 'green', 'blue', 'yellow', 'cyan']))])
+            logger.info("Response: %s", info_str)
 
         if not skipLogTraffic:
             if conn and getattr(conn, "redurl", None):
@@ -1017,6 +1047,8 @@ class Connect(object):
 
         value = agent.adjustLateValues(value)
         payload = agent.extractPayload(value)
+        # logger.info("Payload: %s", payload)
+        # logger.log(CUSTOM_LOGGING.YPAY, safecharencode(payload.replace('\\', BOUNDARY_BACKSLASH_MARKER)).replace(BOUNDARY_BACKSLASH_MARKER, '\\'))
         threadData = getCurrentThreadData()
 
         if conf.httpHeaders:
@@ -1063,6 +1095,8 @@ class Connect(object):
                         else:
                             value = "%s%s%s" % (hints[HINT.PREPEND], delimiter, value)
 
+            payload_print = payload.replace("'", '"')
+            logger.info("Payload: %s", setColor(payload_print, "grey"))
             logger.log(CUSTOM_LOGGING.PAYLOAD, safecharencode(payload.replace('\\', BOUNDARY_BACKSLASH_MARKER)).replace(BOUNDARY_BACKSLASH_MARKER, '\\'))
 
             if place == PLACE.CUSTOM_POST and kb.postHint:

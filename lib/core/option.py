@@ -2304,6 +2304,9 @@ def setVerbosity():
 
     conf.verbose = int(conf.verbose)
 
+    # logger.setLevel(CUSTOM_LOGGING.YRESP)
+    # logger.setLevel(CUSTOM_LOGGING.YPAY)
+
     if conf.verbose == 0:
         logger.setLevel(logging.ERROR)
     elif conf.verbose == 1:

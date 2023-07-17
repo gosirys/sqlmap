@@ -23,6 +23,7 @@ conf = AttribDict()
 
 # object to share within function and classes results
 kb = AttribDict()
+kb.http_traffic = []
 
 # object with each database management system specific queries
 queries = {}
