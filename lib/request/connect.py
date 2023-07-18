@@ -942,7 +942,7 @@ class Connect(object):
                 'SC': status_code,
                 'W': num_words,
                 'L': num_lines,
-                'TTL': time_taken
+                'TTFB': time_taken
             })
 
             for function in kb.postprocessFunctions:
@@ -975,10 +975,12 @@ class Connect(object):
 
         processResponse(page, responseHeaders, code, status)
 
+        # for info in kb.http_traffic:
+        #     info_str = ' '.join([setColor('[%s] %s' % (k, '{:<15}'.format(v)), color) for k, v, color in zip(info.keys(), info.values(), cycle(['red', 'green', 'blue', 'yellow', 'cyan']))])
+        #     logger.info("Response: %s", info_str)
         for info in kb.http_traffic:
-            info_str = ' '.join([setColor('[%s] %s' % (k, '{:<15}'.format(v)), color) for k, v, color in zip(info.keys(), info.values(), cycle(['red', 'green', 'blue', 'yellow', 'cyan']))])
+            info_str = ' '.join([setColor('[%s] %s' % (k, '{:<15}'.format(v)), 'red' if k == 'SC' and v == 500 else color, bold=(k == 'TTFB' and v > 5) or (k == 'SC' and v == 500)) for k, v, color in zip(info.keys(), info.values(), cycle(['red', 'green', 'blue', 'yellow', 'cyan']))])
             logger.info("Response: %s", info_str)
-
         if not skipLogTraffic:
             if conn and getattr(conn, "redurl", None):
                 _ = _urllib.parse.urlsplit(conn.redurl)
