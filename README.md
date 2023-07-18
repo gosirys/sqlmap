@@ -1,3 +1,23 @@
+# About this fork
+Small changes to alter sqlmap output so that it shows by default (regardless of verbose settings), the following.
+ 
+HTTP request:
+- payload
+ 
+HTTP response:
+- (SC) status code, (CL) content lenght, (W) words, (L) lines, (TTFB) time to first byte
+ 
+If TTFB is >= 5s it gets highlighted in bold, same as if SC is 500.
+ 
+Those changes were made to allow to quickly spot anomalies in the application's behaviour based on the payload. I believe the ability to monitor those **key metrics** directly from the terminal is the first step towards not needing to constantly having to tunnel sqlmap's traffic to burp. 
+
+New output:
+ 
+![Screenshot](https://raw.githubusercontent.com/gosirys/sqlmap/master/doc/OUTPUT.png)
+ 
+In the future, when time allows, I'd like to rebuild its intire interface to use python's textual library and by doing so effectively creating a TUI.
+Imagine combining mitmproxy TUI with sqlmap. No more tunneling to client-side proxy to debug, figure out what's not working, what is getting blocked by a WAF, etc. All could be done directly through the TUI.
+ 
 # sqlmap ![](https://i.imgur.com/fe85aVR.png)
 
 [![.github/workflows/tests.yml](https://github.com/sqlmapproject/sqlmap/actions/workflows/tests.yml/badge.svg)](https://github.com/sqlmapproject/sqlmap/actions/workflows/tests.yml) [![Python 2.6|2.7|3.x](https://img.shields.io/badge/python-2.6|2.7|3.x-yellow.svg)](https://www.python.org/) [![License](https://img.shields.io/badge/license-GPLv2-red.svg)](https://raw.githubusercontent.com/sqlmapproject/sqlmap/master/LICENSE) [![Twitter](https://img.shields.io/badge/twitter-@sqlmap-blue.svg)](https://twitter.com/sqlmap)
