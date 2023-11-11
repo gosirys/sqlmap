@@ -123,10 +123,12 @@ def vulnTest():
         time.sleep(1)
 
     if not vulnserver._alive:
-        logger.error("problem occurred in vulnserver instantiation (address: 'http://%s:%s')" % (address, port))
+        logger.error(
+            f"problem occurred in vulnserver instantiation (address: 'http://{address}:{port}')"
+        )
         return False
     else:
-        logger.info("vulnserver running at 'http://%s:%s'..." % (address, port))
+        logger.info(f"vulnserver running at 'http://{address}:{port}'...")
 
     handle, config = tempfile.mkstemp(suffix=".conf")
     os.close(handle)
@@ -158,11 +160,21 @@ def vulnTest():
         f.flush()
 
     base = "http://%s:%d/" % (address, port)
-    url = "%s?id=1" % base
-    direct = "sqlite3://%s" % database
+    url = f"{base}?id=1"
+    direct = f"sqlite3://{database}"
     tmpdir = tempfile.mkdtemp()
 
-    content = open(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sqlmap.conf"))).read().replace("url =", "url = %s" % url)
+    content = (
+        open(
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), "..", "..", "sqlmap.conf"
+                )
+            )
+        )
+        .read()
+        .replace("url =", f"url = {url}")
+    )
     with open(config, "w+") as f:
         f.write(content)
         f.flush()
@@ -183,7 +195,17 @@ def vulnTest():
         for tag, value in (("<url>", url), ("<base>", base), ("<direct>", direct), ("<tmpdir>", tmpdir), ("<request>", request), ("<log>", log), ("<multiple>", multiple), ("<config>", config), ("<base64>", url.replace("id=1", "id=MZ=%3d"))):
             options = options.replace(tag, value)
 
-        cmd = "%s \"%s\" %s --batch --non-interactive --debug --time-sec=1" % (sys.executable if ' ' not in sys.executable else '"%s"' % sys.executable, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "sqlmap.py")), options)
+        cmd = "%s \"%s\" %s --batch --non-interactive --debug --time-sec=1" % (
+            sys.executable
+            if ' ' not in sys.executable
+            else f'"{sys.executable}"',
+            os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__), "..", "..", "sqlmap.py"
+                )
+            ),
+            options,
+        )
 
         if "<tmpfile>" in cmd:
             handle, tmp = tempfile.mkstemp()
@@ -219,7 +241,7 @@ def smokeTest():
         try:
             re.compile(regex)
         except re.error:
-            errMsg = "smoke test failed at compiling '%s'" % regex
+            errMsg = f"smoke test failed at compiling '{regex}'"
             logger.error(errMsg)
             return False
 
@@ -276,7 +298,7 @@ def smokeTest():
                         try:
                             re.compile(candidate)
                         except:
-                            errMsg = "smoke test failed at compiling '%s'" % candidate
+                            errMsg = f"smoke test failed at compiling '{candidate}'"
                             logger.error(errMsg)
                             raise
                 else:

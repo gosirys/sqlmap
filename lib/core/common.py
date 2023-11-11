@@ -217,7 +217,7 @@ class UnicodeRawConfigParser(_configparser.RawConfigParser):
             fp.write("[%s]\n" % _configparser.DEFAULTSECT)
 
             for (key, value) in self._defaults.items():
-                fp.write("%s = %s" % (key, getUnicode(value, UNICODE_ENCODING)))
+                fp.write(f"{key} = {getUnicode(value, UNICODE_ENCODING)}")
 
             fp.write("\n")
 
@@ -252,7 +252,11 @@ class Format(object):
         if versions is None and Backend.getVersionList():
             versions = Backend.getVersionList()
 
-        return Backend.getDbms() if versions is None else "%s %s" % (Backend.getDbms(), " and ".join(filterNone(versions)))
+        return (
+            Backend.getDbms()
+            if versions is None
+            else f'{Backend.getDbms()} {" and ".join(filterNone(versions))}'
+        )
 
     @staticmethod
     def getErrorParsedDBMSes():
@@ -312,21 +316,21 @@ class Format(object):
 
         if info and "type" in info:
             if conf.api:
-                infoApi["%s operating system" % target] = info
+                infoApi[f"{target} operating system"] = info
             else:
-                infoStr += "%s operating system: %s" % (target, Format.humanize(info["type"]))
+                infoStr += f'{target} operating system: {Format.humanize(info["type"])}'
 
                 if "distrib" in info:
-                    infoStr += " %s" % Format.humanize(info["distrib"])
+                    infoStr += f' {Format.humanize(info["distrib"])}'
 
                 if "release" in info:
-                    infoStr += " %s" % Format.humanize(info["release"])
+                    infoStr += f' {Format.humanize(info["release"])}'
 
                 if "sp" in info:
-                    infoStr += " %s" % Format.humanize(info["sp"])
+                    infoStr += f' {Format.humanize(info["sp"])}'
 
                 if "codename" in info:
-                    infoStr += " (%s)" % Format.humanize(info["codename"])
+                    infoStr += f' ({Format.humanize(info["codename"])})'
 
         if "technology" in info:
             if conf.api:
@@ -334,10 +338,7 @@ class Format(object):
             else:
                 infoStr += "\nweb application technology: %s" % Format.humanize(info["technology"], ", ")
 
-        if conf.api:
-            return infoApi
-        else:
-            return infoStr.lstrip()
+        return infoApi if conf.api else infoStr.lstrip()
 
 class Backend(object):
     @staticmethod
@@ -347,17 +348,18 @@ class Backend(object):
         if dbms is None:
             return None
 
-        # Little precaution, in theory this condition should always be false
         elif kb.dbms is not None and kb.dbms != dbms:
-            warnMsg = "there appears to be a high probability that "
-            warnMsg += "this could be a false positive case"
+            warnMsg = (
+                "there appears to be a high probability that "
+                + "this could be a false positive case"
+            )
             logger.warning(warnMsg)
 
             msg = "sqlmap previously fingerprinted back-end DBMS as "
-            msg += "%s. However now it has been fingerprinted " % kb.dbms
-            msg += "as %s. " % dbms
+            msg += f"{kb.dbms}. However now it has been fingerprinted "
+            msg += f"as {dbms}. "
             msg += "Please, specify which DBMS should be "
-            msg += "correct [%s (default)/%s] " % (kb.dbms, dbms)
+            msg += f"correct [{kb.dbms} (default)/{dbms}] "
 
             while True:
                 choice = readInput(msg, default=kb.dbms)
@@ -411,13 +413,12 @@ class Backend(object):
         if os is None:
             return None
 
-        # Little precaution, in theory this condition should always be false
         elif kb.os is not None and isinstance(os, six.string_types) and kb.os.lower() != os.lower():
             msg = "sqlmap previously fingerprinted back-end DBMS "
-            msg += "operating system %s. However now it has " % kb.os
-            msg += "been fingerprinted to be %s. " % os
+            msg += f"operating system {kb.os}. However now it has "
+            msg += f"been fingerprinted to be {os}. "
             msg += "Please, specify which OS is "
-            msg += "correct [%s (default)/%s] " % (kb.os, os)
+            msg += f"correct [{kb.os} (default)/{os}] "
 
             while True:
                 choice = readInput(msg, default=kb.os)
@@ -454,14 +455,20 @@ class Backend(object):
 
     @staticmethod
     def setArch():
-        msg = "what is the back-end database management system architecture?"
-        msg += "\n[1] 32-bit (default)"
+        msg = (
+            "what is the back-end database management system architecture?"
+            + "\n[1] 32-bit (default)"
+        )
         msg += "\n[2] 64-bit"
 
         while True:
             choice = readInput(msg, default='1')
 
-            if hasattr(choice, "isdigit") and choice.isdigit() and int(choice) in (1, 2):
+            if (
+                hasattr(choice, "isdigit")
+                and choice.isdigit()
+                and int(choice) in {1, 2}
+            ):
                 kb.arch = 32 if int(choice) == 1 else 64
                 break
             else:
@@ -525,18 +532,12 @@ class Backend(object):
     @staticmethod
     def getVersion():
         versions = filterNone(flattenValue(kb.dbmsVersion)) if not isinstance(kb.dbmsVersion, six.string_types) else [kb.dbmsVersion]
-        if not isNoneValue(versions):
-            return versions[0]
-        else:
-            return None
+        return versions[0] if not isNoneValue(versions) else None
 
     @staticmethod
     def getVersionList():
         versions = filterNone(flattenValue(kb.dbmsVersion)) if not isinstance(kb.dbmsVersion, six.string_types) else [kb.dbmsVersion]
-        if not isNoneValue(versions):
-            return versions
-        else:
-            return None
+        return versions if not isNoneValue(versions) else None
 
     @staticmethod
     def getOs():
@@ -560,7 +561,9 @@ class Backend(object):
     @staticmethod
     def isDbms(dbms):
         if not kb.get("testMode") and all((Backend.getDbms(), Backend.getIdentifiedDbms())) and Backend.getDbms() != Backend.getIdentifiedDbms():
-            singleTimeWarnMessage("identified ('%s') and fingerprinted ('%s') DBMSes differ. If you experience problems in enumeration phase please rerun with '--flush-session'" % (Backend.getIdentifiedDbms(), Backend.getDbms()))
+            singleTimeWarnMessage(
+                f"identified ('{Backend.getIdentifiedDbms()}') and fingerprinted ('{Backend.getDbms()}') DBMSes differ. If you experience problems in enumeration phase please rerun with '--flush-session'"
+            )
         return Backend.getIdentifiedDbms() == aliasToDbmsEnum(dbms)
 
     @staticmethod
@@ -580,11 +583,10 @@ class Backend(object):
         if Backend.getVersionList() is None:
             return False
 
-        for _ in Backend.getVersionList():
-            if _ != UNKNOWN_DBMS_VERSION and _ in versionList:
-                return True
-
-        return False
+        return any(
+            _ != UNKNOWN_DBMS_VERSION and _ in versionList
+            for _ in Backend.getVersionList()
+        )
 
     @staticmethod
     def isVersionGreaterOrEqualThan(version):

@@ -83,7 +83,7 @@ def main(src, dst):
             if sock in select.select([sock], [], [])[0]:
                 buff = sock.recv(4096)
 
-                if 0 == len(buff):
+                if len(buff) == 0:
                     # Socket remotely closed
                     sock.close()
                     sys.exit(0)
@@ -93,7 +93,11 @@ def main(src, dst):
                 icmppacket = ippacket.child()
 
                 # If the packet matches, report it to the user
-                if ippacket.get_ip_dst() == src and ippacket.get_ip_src() == dst and 8 == icmppacket.get_icmp_type():
+                if (
+                    ippacket.get_ip_dst() == src
+                    and ippacket.get_ip_src() == dst
+                    and icmppacket.get_icmp_type() == 8
+                ):
                     # Get identifier and sequence number
                     ident = icmppacket.get_icmp_id()
                     seq_id = icmppacket.get_icmp_seq()
@@ -136,8 +140,10 @@ def main(src, dst):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        msg = 'missing mandatory options. Execute as root:\n'
-        msg += './icmpsh-m.py <source IP address> <destination IP address>\n'
+        msg = (
+            'missing mandatory options. Execute as root:\n'
+            + './icmpsh-m.py <source IP address> <destination IP address>\n'
+        )
         sys.stderr.write(msg)
         sys.exit(1)
 

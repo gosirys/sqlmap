@@ -104,8 +104,12 @@ def exceptionHandledFunction(threadFunction, silent=False):
         from lib.core.common import getSafeExString
 
         if not silent and kb.get("threadContinue") and not kb.get("multipleCtrlC") and not isinstance(ex, (SqlmapUserQuitException, SqlmapSkipTargetException)):
-            errMsg = getSafeExString(ex) if isinstance(ex, SqlmapBaseException) else "%s: %s" % (type(ex).__name__, getSafeExString(ex))
-            logger.error("thread %s: '%s'" % (threading.currentThread().getName(), errMsg))
+            errMsg = (
+                getSafeExString(ex)
+                if isinstance(ex, SqlmapBaseException)
+                else f"{type(ex).__name__}: {getSafeExString(ex)}"
+            )
+            logger.error(f"thread {threading.currentThread().getName()}: '{errMsg}'")
 
             if conf.get("verbose") > 1 and not isinstance(ex, SqlmapConnectionException):
                 traceback.print_exc()
@@ -134,7 +138,18 @@ def runThreads(numThreads, threadFunction, cleanupFunction=None, forwardExceptio
     kb.multiThreadMode = False
 
     try:
-        if threadChoice and conf.threads == numThreads == 1 and not (kb.injection.data and not any(_ not in (PAYLOAD.TECHNIQUE.TIME, PAYLOAD.TECHNIQUE.STACKED) for _ in kb.injection.data)):
+        if (
+            threadChoice
+            and conf.threads == numThreads == 1
+            and (
+                not kb.injection.data
+                or any(
+                    _
+                    not in (PAYLOAD.TECHNIQUE.TIME, PAYLOAD.TECHNIQUE.STACKED)
+                    for _ in kb.injection.data
+                )
+            )
+        ):
             while True:
                 message = "please enter number of threads? [Enter for %d (current)] " % numThreads
                 choice = readInput(message, default=str(numThreads))
@@ -180,7 +195,7 @@ def runThreads(numThreads, threadFunction, cleanupFunction=None, forwardExceptio
             try:
                 thread.start()
             except Exception as ex:
-                errMsg = "error occurred while starting new thread ('%s')" % ex
+                errMsg = f"error occurred while starting new thread ('{ex}')"
                 logger.critical(errMsg)
                 break
 
@@ -208,7 +223,9 @@ def runThreads(numThreads, threadFunction, cleanupFunction=None, forwardExceptio
         kb.lastCtrlCTime = time.time()
 
         if numThreads > 1:
-            logger.info("waiting for threads to finish%s" % (" (Ctrl+C was pressed)" if isinstance(ex, KeyboardInterrupt) else ""))
+            logger.info(
+                f'waiting for threads to finish{" (Ctrl+C was pressed)" if isinstance(ex, KeyboardInterrupt) else ""}'
+            )
         try:
             while (threading.active_count() > 1):
                 pass
@@ -223,7 +240,7 @@ def runThreads(numThreads, threadFunction, cleanupFunction=None, forwardExceptio
     except (SqlmapConnectionException, SqlmapValueException) as ex:
         print()
         kb.threadException = True
-        logger.error("thread %s: '%s'" % (threading.currentThread().getName(), ex))
+        logger.error(f"thread {threading.currentThread().getName()}: '{ex}'")
 
         if conf.get("verbose") > 1 and isinstance(ex, SqlmapValueException):
             traceback.print_exc()
@@ -234,13 +251,12 @@ def runThreads(numThreads, threadFunction, cleanupFunction=None, forwardExceptio
         if not kb.multipleCtrlC:
             if isinstance(ex, sqlite3.Error):
                 raise
-            else:
-                from lib.core.common import unhandledExceptionMessage
+            from lib.core.common import unhandledExceptionMessage
 
-                kb.threadException = True
-                errMsg = unhandledExceptionMessage()
-                logger.error("thread %s: %s" % (threading.currentThread().getName(), errMsg))
-                traceback.print_exc()
+            kb.threadException = True
+            errMsg = unhandledExceptionMessage()
+            logger.error(f"thread {threading.currentThread().getName()}: {errMsg}")
+            traceback.print_exc()
 
     finally:
         kb.multiThreadMode = False

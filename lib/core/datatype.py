@@ -45,7 +45,7 @@ class AttribDict(dict):
             return self.__getitem__(item)
         except KeyError:
             if self.keycheck:
-                raise AttributeError("unable to access item '%s'" % item)
+                raise AttributeError(f"unable to access item '{item}'")
             else:
                 return None
 
@@ -223,7 +223,7 @@ class OrderedSet(_collections.MutableSet):
 
     def __repr__(self):
         if not self:
-            return '%s()' % (self.__class__.__name__,)
+            return f'{self.__class__.__name__}()'
         return '%s(%r)' % (self.__class__.__name__, list(self))
 
     def __eq__(self, other):

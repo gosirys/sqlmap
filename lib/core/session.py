@@ -25,17 +25,15 @@ def setDbms(dbms):
 
     hashDBWrite(HASHDB_KEYS.DBMS, dbms)
 
-    _ = "(%s)" % ('|'.join(SUPPORTED_DBMS))
-    _ = re.search(r"\A%s( |\Z)" % _, dbms, re.I)
-
-    if _:
+    _ = f"({'|'.join(SUPPORTED_DBMS)})"
+    if _ := re.search(r"\A%s( |\Z)" % _, dbms, re.I):
         dbms = _.group(1)
 
     Backend.setDbms(dbms)
     if kb.resolutionDbms:
         hashDBWrite(HASHDB_KEYS.DBMS, kb.resolutionDbms)
 
-    logger.info("the back-end DBMS is %s" % Backend.getDbms())
+    logger.info(f"the back-end DBMS is {Backend.getDbms()}")
 
 def setOs():
     """
@@ -58,11 +56,11 @@ def setOs():
 
     if "type" in kb.bannerFp:
         Backend.setOs(Format.humanize(kb.bannerFp["type"]))
-        infoMsg = "the back-end DBMS operating system is %s" % Backend.getOs()
+        infoMsg = f"the back-end DBMS operating system is {Backend.getOs()}"
 
     if "distrib" in kb.bannerFp:
         kb.osVersion = Format.humanize(kb.bannerFp["distrib"])
-        infoMsg += " %s" % kb.osVersion
+        infoMsg += f" {kb.osVersion}"
 
     if "sp" in kb.bannerFp:
         kb.osSP = int(Format.humanize(kb.bannerFp["sp"]).replace("Service Pack ", ""))

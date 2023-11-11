@@ -117,14 +117,18 @@ def checkEnvironment():
     try:
         os.path.isdir(modulePath())
     except UnicodeEncodeError:
-        errMsg = "your system does not properly handle non-ASCII paths. "
-        errMsg += "Please move the sqlmap's directory to the other location"
+        errMsg = (
+            "your system does not properly handle non-ASCII paths. "
+            + "Please move the sqlmap's directory to the other location"
+        )
         logger.critical(errMsg)
         raise SystemExit
 
     if LooseVersion(VERSION) < LooseVersion("1.0"):
-        errMsg = "your runtime environment (e.g. PYTHONPATH) is "
-        errMsg += "broken. Please make sure that you are not running "
+        errMsg = (
+            "your runtime environment (e.g. PYTHONPATH) is "
+            + "broken. Please make sure that you are not running "
+        )
         errMsg += "newer versions of sqlmap with runtime scripts for older "
         errMsg += "versions"
         logger.critical(errMsg)

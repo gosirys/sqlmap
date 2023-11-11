@@ -35,20 +35,21 @@ def action():
     if not Backend.getDbms() or not conf.dbmsHandler:
         htmlParsed = Format.getErrorParsedDBMSes()
 
-        errMsg = "sqlmap was not able to fingerprint the "
-        errMsg += "back-end database management system"
-
+        errMsg = (
+            "sqlmap was not able to fingerprint the "
+            + "back-end database management system"
+        )
         if htmlParsed:
             errMsg += ", but from the HTML error page it was "
             errMsg += "possible to determinate that the "
-            errMsg += "back-end DBMS is %s" % htmlParsed
+            errMsg += f"back-end DBMS is {htmlParsed}"
 
         if htmlParsed and htmlParsed.lower() in SUPPORTED_DBMS:
             errMsg += ". Do not specify the back-end DBMS manually, "
             errMsg += "sqlmap will fingerprint the DBMS for you"
         elif kb.nullConnection:
             errMsg += ". You can try to rerun without using optimization "
-            errMsg += "switch '%s'" % ("-o" if conf.optimize else "--null-connection")
+            errMsg += f"""switch '{"-o" if conf.optimize else "--null-connection"}'"""
 
         raise SqlmapUnsupportedDBMSException(errMsg)
 
@@ -184,8 +185,7 @@ def action():
 
     if conf.sqlQuery:
         for query in conf.sqlQuery.strip(';').split(';'):
-            query = query.strip()
-            if query:
+            if query := query.strip():
                 conf.dumper.sqlQuery(query, conf.dbmsHandler.sqlQuery(query))
 
     if conf.sqlShell:

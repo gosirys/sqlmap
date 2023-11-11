@@ -25,5 +25,5 @@ def profile(profileOutputFile=None):
     # Start sqlmap main function and generate a raw profile file
     cProfile.run("start()", profileOutputFile)
 
-    infoMsg = "execution profiled and stored into file '%s' (e.g. 'gprof2dot -f pstats %s | dot -Tpng -o /tmp/sqlmap_profile.png')" % (profileOutputFile, profileOutputFile)
+    infoMsg = f"execution profiled and stored into file '{profileOutputFile}' (e.g. 'gprof2dot -f pstats {profileOutputFile} | dot -Tpng -o /tmp/sqlmap_profile.png')"
     logger.info(infoMsg)

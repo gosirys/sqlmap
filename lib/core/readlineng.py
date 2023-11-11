@@ -5,6 +5,7 @@ Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
+
 _readline = None
 try:
     from readline import *
@@ -24,8 +25,7 @@ if IS_WIN and _readline:
     try:
         _outputfile = _readline.GetOutputFile()
     except AttributeError:
-        debugMsg = "Failed GetOutputFile when using platform's "
-        debugMsg += "readline library"
+        debugMsg = "Failed GetOutputFile when using platform's " + "readline library"
         logger.debug(debugMsg)
 
         _readline = None
@@ -37,14 +37,18 @@ uses_libedit = False
 if PLATFORM == "mac" and _readline:
     import commands
 
-    (status, result) = commands.getstatusoutput("otool -L %s | grep libedit" % _readline.__file__)
+    (status, result) = commands.getstatusoutput(
+        f"otool -L {_readline.__file__} | grep libedit"
+    )
 
     if status == 0 and len(result) > 0:
         # We are bound to libedit - new in Leopard
         _readline.parse_and_bind("bind ^I rl_complete")
 
-        debugMsg = "Leopard libedit detected when using platform's "
-        debugMsg += "readline library"
+        debugMsg = (
+            "Leopard libedit detected when using platform's "
+            + "readline library"
+        )
         logger.debug(debugMsg)
 
         uses_libedit = True

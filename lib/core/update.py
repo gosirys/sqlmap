@@ -39,8 +39,10 @@ def update():
     success = False
 
     if TYPE == "pip":
-        infoMsg = "updating sqlmap to the latest stable version from the "
-        infoMsg += "PyPI repository"
+        infoMsg = (
+            "updating sqlmap to the latest stable version from the "
+            + "PyPI repository"
+        )
         logger.info(infoMsg)
 
         debugMsg = "sqlmap will try to update itself using 'pip' command"
@@ -67,11 +69,13 @@ def update():
 
     elif not os.path.exists(os.path.join(paths.SQLMAP_ROOT_PATH, ".git")):
         warnMsg = "not a git repository. It is recommended to clone the 'sqlmapproject/sqlmap' repository "
-        warnMsg += "from GitHub (e.g. 'git clone --depth 1 %s sqlmap')" % GIT_REPOSITORY
+        warnMsg += f"from GitHub (e.g. 'git clone --depth 1 {GIT_REPOSITORY} sqlmap')"
         logger.warning(warnMsg)
 
         if VERSION == getLatestRevision():
-            logger.info("already at the latest revision '%s'" % (getRevisionNumber() or VERSION))
+            logger.info(
+                f"already at the latest revision '{getRevisionNumber() or VERSION}'"
+            )
             return
 
         message = "do you want to try to fetch the latest 'zipball' from repository and extract it (experimental) ? [y/N]"
@@ -81,7 +85,7 @@ def update():
             try:
                 open(os.path.join(directory, "sqlmap.py"), "w+b")
             except Exception as ex:
-                errMsg = "unable to update content of directory '%s' ('%s')" % (directory, getSafeExString(ex))
+                errMsg = f"unable to update content of directory '{directory}' ('{getSafeExString(ex)}')"
                 logger.error(errMsg)
             else:
                 attrs = os.stat(os.path.join(directory, "sqlmap.py")).st_mode
@@ -96,7 +100,7 @@ def update():
                             pass
 
                 if glob.glob(os.path.join(directory, '*')):
-                    errMsg = "unable to clear the content of directory '%s'" % directory
+                    errMsg = f"unable to clear the content of directory '{directory}'"
                     logger.error(errMsg)
                 else:
                     try:
@@ -112,10 +116,10 @@ def update():
                         if os.path.isfile(filepath):
                             with openFile(filepath, "rb") as f:
                                 version = re.search(r"(?m)^VERSION\s*=\s*['\"]([^'\"]+)", f.read()).group(1)
-                                logger.info("updated to the latest version '%s#dev'" % version)
+                                logger.info(f"updated to the latest version '{version}#dev'")
                                 success = True
                     except Exception as ex:
-                        logger.error("update could not be completed ('%s')" % getSafeExString(ex))
+                        logger.error(f"update could not be completed ('{getSafeExString(ex)}')")
                     else:
                         if not success:
                             logger.error("update could not be completed")
@@ -123,11 +127,15 @@ def update():
                             try:
                                 os.chmod(os.path.join(directory, "sqlmap.py"), attrs)
                             except OSError:
-                                logger.warning("could not set the file attributes of '%s'" % os.path.join(directory, "sqlmap.py"))
+                                logger.warning(
+                                    f"""could not set the file attributes of '{os.path.join(directory, "sqlmap.py")}'"""
+                                )
 
     else:
-        infoMsg = "updating sqlmap to the latest development revision from the "
-        infoMsg += "GitHub repository"
+        infoMsg = (
+            "updating sqlmap to the latest development revision from the "
+            + "GitHub repository"
+        )
         logger.info(infoMsg)
 
         debugMsg = "sqlmap will try to update itself using 'git' command"
@@ -137,7 +145,13 @@ def update():
 
         output = ""
         try:
-            process = subprocess.Popen("git checkout . && git pull %s HEAD" % GIT_REPOSITORY, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=paths.SQLMAP_ROOT_PATH)
+            process = subprocess.Popen(
+                f"git checkout . && git pull {GIT_REPOSITORY} HEAD",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=paths.SQLMAP_ROOT_PATH,
+            )
             pollProcess(process, True)
             output, _ = process.communicate()
             success = not process.returncode
@@ -148,24 +162,28 @@ def update():
             output = getText(output)
 
         if success:
-            logger.info("%s the latest revision '%s'" % ("already at" if "Already" in output else "updated to", getRevisionNumber()))
+            logger.info(
+                f"""{"already at" if "Already" in output else "updated to"} the latest revision '{getRevisionNumber()}'"""
+            )
+        elif "Not a git repository" in output:
+            errMsg = "not a valid git repository. Please checkout the 'sqlmapproject/sqlmap' repository "
+            errMsg += f"from GitHub (e.g. 'git clone --depth 1 {GIT_REPOSITORY} sqlmap')"
+            logger.error(errMsg)
         else:
-            if "Not a git repository" in output:
-                errMsg = "not a valid git repository. Please checkout the 'sqlmapproject/sqlmap' repository "
-                errMsg += "from GitHub (e.g. 'git clone --depth 1 %s sqlmap')" % GIT_REPOSITORY
-                logger.error(errMsg)
-            else:
-                logger.error("update could not be completed ('%s')" % re.sub(r"\W+", " ", output).strip())
+            logger.error("update could not be completed ('%s')" % re.sub(r"\W+", " ", output).strip())
 
     if not success:
         if IS_WIN:
-            infoMsg = "for Windows platform it's recommended "
-            infoMsg += "to use a GitHub for Windows client for updating "
+            infoMsg = (
+                "for Windows platform it's recommended "
+                + "to use a GitHub for Windows client for updating "
+            )
             infoMsg += "purposes (https://desktop.github.com/) or just "
             infoMsg += "download the latest snapshot from "
             infoMsg += "https://github.com/sqlmapproject/sqlmap/downloads"
         else:
-            infoMsg = "for Linux platform it's recommended "
-            infoMsg += "to install a standard 'git' package (e.g.: 'apt install git')"
-
+            infoMsg = (
+                "for Linux platform it's recommended "
+                + "to install a standard 'git' package (e.g.: 'apt install git')"
+            )
         logger.info(infoMsg)

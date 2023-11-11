@@ -32,10 +32,7 @@ try:
             n = len(text)
 
             for ns in (self.namespace,):
-                for word in ns:
-                    if word[:n] == text:
-                        matches.append(word)
-
+                matches.extend(word for word in ns if word[:n] == text)
             return matches
 except:
     readline._readline = None
@@ -78,7 +75,7 @@ def saveHistory(completion=None):
         try:
             readline.write_history_file(historyPath)
         except IOError as ex:
-            warnMsg = "there was a problem writing the history file '%s' (%s)" % (historyPath, getSafeExString(ex))
+            warnMsg = f"there was a problem writing the history file '{historyPath}' ({getSafeExString(ex)})"
             logger.warning(warnMsg)
     except KeyboardInterrupt:
         pass
@@ -102,11 +99,11 @@ def loadHistory(completion=None):
         try:
             readline.read_history_file(historyPath)
         except IOError as ex:
-            warnMsg = "there was a problem loading the history file '%s' (%s)" % (historyPath, getSafeExString(ex))
+            warnMsg = f"there was a problem loading the history file '{historyPath}' ({getSafeExString(ex)})"
             logger.warning(warnMsg)
         except UnicodeError:
             if IS_WIN:
-                warnMsg = "there was a problem loading the history file '%s'. " % historyPath
+                warnMsg = f"there was a problem loading the history file '{historyPath}'. "
                 warnMsg += "More info can be found at 'https://github.com/pyreadline/pyreadline/issues/30'"
                 logger.warning(warnMsg)
 
@@ -142,7 +139,7 @@ def autoCompletion(completion=None, os=None, commands=None):
         readline.parse_and_bind("tab: complete")
 
     elif commands:
-        completer = CompleterNG(dict(((_, None) for _ in commands)))
+        completer = CompleterNG({_: None for _ in commands})
         readline.set_completer_delims(' ')
         readline.set_completer(completer.complete)
         readline.parse_and_bind("tab: complete")

@@ -38,7 +38,7 @@ def _speaker_beep():
 
 # Reference: https://lists.gnu.org/archive/html/emacs-devel/2014-09/msg00815.html
 def _cygwin_beep(filename):
-    os.system("play-sound-file '%s' 2>/dev/null" % filename)
+    os.system(f"play-sound-file '{filename}' 2>/dev/null")
 
 def _mac_beep():
     import Carbon.Snd
@@ -51,7 +51,7 @@ def _win_wav_play(filename):
 
 def _linux_wav_play(filename):
     for _ in ("aplay", "paplay", "play"):
-        if not os.system("%s '%s' 2>/dev/null" % (_, filename)):
+        if not os.system(f"{_} '{filename}' 2>/dev/null"):
             return
 
     import ctypes
@@ -79,7 +79,9 @@ def _linux_wav_play(filename):
 
     pa_stream = pa.pa_simple_new(None, filename, PA_STREAM_PLAYBACK, None, "playback", ctypes.byref(pa_sample_spec), None, None, ctypes.byref(error))
     if not pa_stream:
-        raise Exception("Could not create pulse audio stream: %s" % pa.strerror(ctypes.byref(error)))
+        raise Exception(
+            f"Could not create pulse audio stream: {pa.strerror(ctypes.byref(error))}"
+        )
 
     while True:
         latency = pa.pa_simple_get_latency(pa_stream, ctypes.byref(error))

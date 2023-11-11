@@ -118,17 +118,16 @@ class BigArray(list):
                     self.chunks[-1] = pickle.loads(zlib.decompress(f.read()))
             except IOError as ex:
                 errMsg = "exception occurred while retrieving data "
-                errMsg += "from a temporary file ('%s')" % ex
+                errMsg += f"from a temporary file ('{ex}')"
                 raise SqlmapSystemException(errMsg)
 
         return self.chunks[-1].pop()
 
     def index(self, value):
-        for index in xrange(len(self)):
-            if self[index] == value:
-                return index
-
-        return ValueError, "%s is not in list" % value
+        return next(
+            (index for index in xrange(len(self)) if self[index] == value),
+            (ValueError, f"{value} is not in list"),
+        )
 
     def _dump(self, chunk):
         try:
@@ -140,7 +139,7 @@ class BigArray(list):
             return filename
         except (OSError, IOError) as ex:
             errMsg = "exception occurred while storing data "
-            errMsg += "to a temporary file ('%s'). Please " % ex
+            errMsg += f"to a temporary file ('{ex}'). Please "
             errMsg += "make sure that there is enough disk space left. If problem persists, "
             errMsg += "try to set environment variable 'TEMP' to a location "
             errMsg += "writeable by the current user"
@@ -157,7 +156,7 @@ class BigArray(list):
                     self.cache = Cache(index, pickle.loads(zlib.decompress(f.read())), False)
             except Exception as ex:
                 errMsg = "exception occurred while retrieving data "
-                errMsg += "from a temporary file ('%s')" % ex
+                errMsg += f"from a temporary file ('{ex}')"
                 raise SqlmapSystemException(errMsg)
 
     def __getstate__(self):
@@ -177,9 +176,8 @@ class BigArray(list):
 
         if isinstance(chunk, list):
             return chunk[offset]
-        else:
-            self._checkcache(index)
-            return self.cache.data[offset]
+        self._checkcache(index)
+        return self.cache.data[offset]
 
     def __setitem__(self, y, value):
         index = y // self.chunk_length
@@ -194,7 +192,7 @@ class BigArray(list):
             self.cache.dirty = True
 
     def __repr__(self):
-        return "%s%s" % ("..." if len(self.chunks) > 1 else "", self.chunks[-1].__repr__())
+        return f'{"..." if len(self.chunks) > 1 else ""}{self.chunks[-1].__repr__()}'
 
     def __iter__(self):
         for i in xrange(len(self)):

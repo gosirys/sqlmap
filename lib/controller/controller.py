@@ -105,9 +105,10 @@ def _selectInjection():
         kb.injection = kb.injections[0]
 
     elif len(points) > 1:
-        message = "there were multiple injection points, please select "
-        message += "the one to use for following injections:\n"
-
+        message = (
+            "there were multiple injection points, please select "
+            + "the one to use for following injections:\n"
+        )
         points = []
 
         for i in xrange(0, len(kb.injections)):
@@ -121,7 +122,7 @@ def _selectInjection():
                 ptype = PAYLOAD.PARAMETER[ptype] if isinstance(ptype, int) else ptype
 
                 message += "[%d] place: %s, parameter: " % (i, place)
-                message += "%s, type: %s" % (parameter, ptype)
+                message += f"{parameter}, type: {ptype}"
 
                 if i == 0:
                     message += " (default)"
@@ -159,7 +160,7 @@ def _formatInjection(inj):
             if count == 1:
                 title = title.replace("columns", "column")
         elif comment:
-            vector = "%s%s" % (vector, comment)
+            vector = f"{vector}{comment}"
         data += "    Type: %s\n" % PAYLOAD.SQLINJECTION[stype]
         data += "    Title: %s\n" % title
         data += "    Payload: %s\n" % urldecode(payload, unsafe="&", spaceplus=(inj.place != PLACE.GET and kb.postSpaceToPlus))
@@ -181,34 +182,43 @@ def _showInjections():
         conf.dumper.string("", {"url": conf.url, "query": conf.parameters.get(PLACE.GET), "data": conf.parameters.get(PLACE.POST)}, content_type=CONTENT_TYPE.TARGET)
         conf.dumper.string("", kb.injections, content_type=CONTENT_TYPE.TECHNIQUES)
     else:
-        data = "".join(set(_formatInjection(_) for _ in kb.injections)).rstrip("\n")
+        data = "".join({_formatInjection(_) for _ in kb.injections}).rstrip("\n")
         conf.dumper.string(header, data)
 
     if conf.tamper:
-        warnMsg = "changes made by tampering scripts are not "
-        warnMsg += "included in shown payload content(s)"
+        warnMsg = (
+            "changes made by tampering scripts are not "
+            + "included in shown payload content(s)"
+        )
         logger.warning(warnMsg)
 
     if conf.hpp:
-        warnMsg = "changes made by HTTP parameter pollution are not "
-        warnMsg += "included in shown payload content(s)"
+        warnMsg = (
+            "changes made by HTTP parameter pollution are not "
+            + "included in shown payload content(s)"
+        )
         logger.warning(warnMsg)
 
 def _randomFillBlankFields(value):
     retVal = value
 
-    if extractRegexResult(EMPTY_FORM_FIELDS_REGEX, value):
+    if extractRegexResult(EMPTY_FORM_FIELDS_REGEX, retVal):
         message = "do you want to fill blank fields with random values? [Y/n] "
 
         if readInput(message, default='Y', boolean=True):
             for match in re.finditer(EMPTY_FORM_FIELDS_REGEX, retVal):
                 item = match.group("result")
-                if not any(_ in item for _ in IGNORE_PARAMETERS) and not re.search(ASP_NET_CONTROL_REGEX, item):
+                if all(
+                    _ not in item for _ in IGNORE_PARAMETERS
+                ) and not re.search(ASP_NET_CONTROL_REGEX, item):
                     newValue = randomStr() if not re.search(r"^id|id$", item, re.I) else randomInt()
                     if item[-1] == DEFAULT_GET_POST_DELIMITER:
-                        retVal = retVal.replace(item, "%s%s%s" % (item[:-1], newValue, DEFAULT_GET_POST_DELIMITER))
+                        retVal = retVal.replace(
+                            item,
+                            f"{item[:-1]}{newValue}{DEFAULT_GET_POST_DELIMITER}",
+                        )
                     else:
-                        retVal = retVal.replace(item, "%s%s" % (item, newValue))
+                        retVal = retVal.replace(item, f"{item}{newValue}")
 
     return retVal
 
@@ -241,7 +251,7 @@ def _saveToResultsFile():
         return
 
     results = {}
-    techniques = dict((_[1], _[0]) for _ in getPublicTypeMembers(PAYLOAD.TECHNIQUE))
+    techniques = {_[1]: _[0] for _ in getPublicTypeMembers(PAYLOAD.TECHNIQUE)}
 
     for injection in kb.injections + kb.falsePositives:
         if injection.place is None or injection.parameter is None:
@@ -256,12 +266,12 @@ def _saveToResultsFile():
     try:
         for key, value in results.items():
             place, parameter, notes = key
-            line = "%s,%s,%s,%s,%s%s" % (safeCSValue(kb.originalUrls.get(conf.url) or conf.url), place, parameter, "".join(techniques[_][0].upper() for _ in sorted(value)), notes, os.linesep)
+            line = f'{safeCSValue(kb.originalUrls.get(conf.url) or conf.url)},{place},{parameter},{"".join(techniques[_][0].upper() for _ in sorted(value))},{notes}{os.linesep}'
             conf.resultsFP.write(line)
 
         conf.resultsFP.flush()
     except IOError as ex:
-        errMsg = "unable to write to the results file '%s' ('%s'). " % (conf.resultsFile, getSafeExString(ex))
+        errMsg = f"unable to write to the results file '{conf.resultsFile}' ('{getSafeExString(ex)}'). "
         raise SqlmapSystemException(errMsg)
 
 @stackedmethod
