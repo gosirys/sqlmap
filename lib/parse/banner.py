@@ -77,7 +77,11 @@ class MSSQLBannerHandler(ContentHandler):
             self._version = self._version.replace(" ", "")
 
             match = re.search(r"\A(?P<major>\d+)\.00\.(?P<build>\d+)\Z", self._version)
-            self._versionAlt = "%s.0.%s.0" % (match.group('major'), match.group('build')) if match else None
+            self._versionAlt = (
+                f"{match.group('major')}.0.{match.group('build')}.0"
+                if match
+                else None
+            )
 
         elif name == "servicepack":
             self._inServicePack = False
@@ -108,8 +112,8 @@ def bannerParser(banner):
         parseXmlFile(xmlfile, handler)
 
         handler = FingerprintHandler(banner, kb.bannerFp)
-        parseXmlFile(paths.GENERIC_XML, handler)
     else:
         handler = FingerprintHandler(banner, kb.bannerFp)
         parseXmlFile(xmlfile, handler)
-        parseXmlFile(paths.GENERIC_XML, handler)
+
+    parseXmlFile(paths.GENERIC_XML, handler)

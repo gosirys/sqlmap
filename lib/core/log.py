@@ -43,8 +43,7 @@ try:
                     prefix = match.group(1) if match else ""
                     message = message[len(prefix):]
 
-                    match = re.search(r"\[([A-Z ]+)\]", message)  # log level
-                    if match:
+                    if match := re.search(r"\[([A-Z ]+)\]", message):
                         level = match.group(1)
                         if message.startswith(self.bold):
                             message = message.replace(self.bold, "")
@@ -54,43 +53,54 @@ try:
                             reset = self.reset
                         message = message.replace(level, ''.join((self.csi, ';'.join(params), 'm', level, reset)), 1)
 
-                        match = re.search(r"\A\s*\[([\d:]+)\]", message)  # time
-                        if match:
+                        if match := re.search(r"\A\s*\[([\d:]+)\]", message):
                             time = match.group(1)
                             message = message.replace(time, ''.join((self.csi, str(self.color_map["cyan"] + 30), 'm', time, self._reset(message))), 1)
 
-                        match = re.search(r"\[(#\d+)\]", message)  # counter
-                        if match:
+                        if match := re.search(r"\[(#\d+)\]", message):
                             counter = match.group(1)
                             message = message.replace(counter, ''.join((self.csi, str(self.color_map["yellow"] + 30), 'm', counter, self._reset(message))), 1)
 
                         if level != "PAYLOAD":
                             if any(_ in message for _ in ("parsed DBMS error message",)):
-                                match = re.search(r": '(.+)'", message)
-                                if match:
+                                if match := re.search(r": '(.+)'", message):
                                     string = match.group(1)
-                                    message = message.replace("'%s'" % string, "'%s'" % ''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message))), 1)
+                                    message = message.replace(
+                                        f"'{string}'",
+                                        f"""'{''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message)))}'""",
+                                        1,
+                                    )
+                            elif match := re.search(r"\bresumed: '(.+\.\.\.)", message):
+                                string = match.group(1)
+                                message = message.replace(
+                                    f"'{string}",
+                                    f"""'{''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message)))}""",
+                                    1,
+                                )
+                            elif match := re.search(
+                                r" \('(.+)'\)\Z", message
+                            ) or re.search(r"output: '(.+)'\Z", message):
+                                string = match.group(1)
+                                message = message.replace(
+                                    f"'{string}'",
+                                    f"""'{''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message)))}'""",
+                                    1,
+                                )
                             else:
-                                match = re.search(r"\bresumed: '(.+\.\.\.)", message)
-                                if match:
+                                for match in re.finditer(r"[^\w]'([^']+)'", message):  # single-quoted
                                     string = match.group(1)
-                                    message = message.replace("'%s" % string, "'%s" % ''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message))), 1)
-                                else:
-                                    match = re.search(r" \('(.+)'\)\Z", message) or re.search(r"output: '(.+)'\Z", message)
-                                    if match:
-                                        string = match.group(1)
-                                        message = message.replace("'%s'" % string, "'%s'" % ''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message))), 1)
-                                    else:
-                                        for match in re.finditer(r"[^\w]'([^']+)'", message):  # single-quoted
-                                            string = match.group(1)
-                                            message = message.replace("'%s'" % string, "'%s'" % ''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message))), 1)
+                                    message = message.replace(
+                                        f"'{string}'",
+                                        f"""'{''.join((self.csi, str(self.color_map["white"] + 30), 'm', string, self._reset(message)))}'""",
+                                        1,
+                                    )
                     else:
                         message = ''.join((self.csi, ';'.join(params), 'm', message, self.reset))
 
                     if prefix:
-                        message = "%s%s" % (prefix, message)
+                        message = f"{prefix}{message}"
 
-                    message = message.replace("%s]" % self.bold, "]%s" % self.bold)  # dirty patch
+                    message = message.replace(f"{self.bold}]", f"]{self.bold}")
 
             return message
 

@@ -158,22 +158,19 @@ class Agent(object):
                     match = re.search(r"\A[^ ]+", newValue)
                     newValue = newValue[len(match.group() if match else ""):]
                     _ = randomInt(2)
-                    value = "%s%s AND %s LIKE %s" % (origValue, match.group() if match else "", _, _ + 1)
+                    value = f'{origValue}{match.group() if match else ""} AND {_} LIKE {_ + 1}'
                 elif conf.invalidBignum:
                     value = randomInt(6)
                 elif conf.invalidString:
                     value = randomStr(6)
                 else:
-                    if newValue.startswith("-"):
-                        value = ""
-                    else:
-                        value = "-%s" % randomInt()
+                    value = "" if newValue.startswith("-") else f"-{randomInt()}"
             elif where == PAYLOAD.WHERE.REPLACE:
                 value = ""
             else:
                 value = origValue
 
-            newValue = "%s%s" % (value, newValue)
+            newValue = f"{value}{newValue}"
 
         newValue = self.cleanupPayload(newValue, origValue) or ""
 
@@ -186,7 +183,7 @@ class Agent(object):
                 newValue = self.adjustLateValues(newValue)
 
             # TODO: support for POST_HINT
-            newValue = "%s%s%s" % (BOUNDED_BASE64_MARKER, newValue, BOUNDED_BASE64_MARKER)
+            newValue = f"{BOUNDED_BASE64_MARKER}{newValue}{BOUNDED_BASE64_MARKER}"
 
             if parameter in kb.base64Originals:
                 origValue = kb.base64Originals[parameter]
@@ -194,12 +191,17 @@ class Agent(object):
                 origValue = encodeBase64(origValue, binary=False, encoding=conf.encoding or UNICODE_ENCODING)
 
         if place in (PLACE.URI, PLACE.CUSTOM_POST, PLACE.CUSTOM_HEADER):
-            _ = "%s%s" % (origValue, kb.customInjectionMark)
+            _ = f"{origValue}{kb.customInjectionMark}"
 
-            if kb.postHint == POST_HINT.JSON and isNumber(origValue) and not isNumber(newValue) and '"%s"' % _ not in paramString:
-                newValue = '"%s"' % self.addPayloadDelimiters(newValue)
+            if (
+                kb.postHint == POST_HINT.JSON
+                and isNumber(origValue)
+                and not isNumber(newValue)
+                and f'"{_}"' not in paramString
+            ):
+                newValue = f'"{self.addPayloadDelimiters(newValue)}"'
             elif kb.postHint == POST_HINT.JSON_LIKE and isNumber(origValue) and not isNumber(newValue) and re.search(r"['\"]%s['\"]" % re.escape(_), paramString) is None:
-                newValue = "'%s'" % self.addPayloadDelimiters(newValue)
+                newValue = f"'{self.addPayloadDelimiters(newValue)}'"
             else:
                 newValue = self.addPayloadDelimiters(newValue)
 
@@ -210,12 +212,17 @@ class Agent(object):
             retVal = retVal.replace(kb.customInjectionMark, "").replace(REPLACEMENT_MARKER, kb.customInjectionMark)
         elif BOUNDED_INJECTION_MARKER in paramDict[parameter]:
             if base64Encoding:
-                retVal = paramString.replace("%s%s" % (_origValue, BOUNDED_INJECTION_MARKER), _newValue)
+                retVal = paramString.replace(
+                    f"{_origValue}{BOUNDED_INJECTION_MARKER}", _newValue
+                )
                 match = re.search(r"(%s)=([^&]*)" % re.sub(r" \(.+", "", parameter), retVal)
                 if match:
                     retVal = retVal.replace(match.group(0), "%s=%s" % (match.group(1), encodeBase64(match.group(2), binary=False, encoding=conf.encoding or UNICODE_ENCODING)))
             else:
-                retVal = paramString.replace("%s%s" % (origValue, BOUNDED_INJECTION_MARKER), self.addPayloadDelimiters(newValue))
+                retVal = paramString.replace(
+                    f"{origValue}{BOUNDED_INJECTION_MARKER}",
+                    self.addPayloadDelimiters(newValue),
+                )
         elif place in (PLACE.USER_AGENT, PLACE.REFERER, PLACE.HOST):
             retVal = paramString.replace(origValue, self.addPayloadDelimiters(newValue))
         else:
@@ -241,12 +248,21 @@ class Agent(object):
 
             if origValue:
                 regex = r"(\A|\b)%s=%s%s" % (re.escape(parameter), re.escape(origValue), r"(\Z|\b)" if origValue[-1].isalnum() else "")
-                retVal = _(regex, "%s=%s" % (parameter, self.addPayloadDelimiters(newValue)), paramString)
+                retVal = _(
+                    regex,
+                    f"{parameter}={self.addPayloadDelimiters(newValue)}",
+                    paramString,
+                )
             else:
                 retVal = _(r"(\A|\b)%s=%s(\Z|%s|%s|\s)" % (re.escape(parameter), re.escape(origValue), DEFAULT_GET_POST_DELIMITER, DEFAULT_COOKIE_DELIMITER), r"%s=%s\g<2>" % (parameter, self.addPayloadDelimiters(newValue)), paramString)
 
             if retVal == paramString and urlencode(parameter) != parameter:
-                retVal = _(r"(\A|\b)%s=%s" % (re.escape(urlencode(parameter)), re.escape(origValue)), "%s=%s" % (urlencode(parameter), self.addPayloadDelimiters(newValue)), paramString)
+                retVal = _(
+                    r"(\A|\b)%s=%s"
+                    % (re.escape(urlencode(parameter)), re.escape(origValue)),
+                    f"{urlencode(parameter)}={self.addPayloadDelimiters(newValue)}",
+                    paramString,
+                )
 
         if retVal:
             retVal = retVal.replace(BOUNDARY_BACKSLASH_MARKER, '\\')
@@ -278,16 +294,13 @@ class Agent(object):
         if where == PAYLOAD.WHERE.REPLACE and not conf.prefix:  # Note: https://github.com/sqlmapproject/sqlmap/issues/4030
             query = ""
 
-        # If the technique is stacked queries (<stype>) do not put a space
-        # after the prefix or it is in GROUP BY / ORDER BY (<clause>)
         elif getTechnique() == PAYLOAD.TECHNIQUE.STACKED:
             query = kb.injection.prefix
-        elif kb.injection.clause == [2, 3] or kb.injection.clause == [2] or kb.injection.clause == [3]:
+        elif kb.injection.clause in [[2, 3], [2], [3]]:
             query = kb.injection.prefix
-        elif clause == [2, 3] or clause == [2] or clause == [3]:
+        elif clause in [[2, 3], [2], [3]]:
             query = prefix
 
-        # In any other case prepend with the full prefix
         else:
             query = kb.injection.prefix or prefix or ""
 
@@ -370,7 +383,12 @@ class Agent(object):
             origValue = getUnicode(origValue)
 
             if "[ORIGVALUE]" in payload:
-                payload = getUnicode(payload).replace("[ORIGVALUE]", origValue if origValue.isdigit() else unescaper.escape("'%s'" % origValue))
+                payload = getUnicode(payload).replace(
+                    "[ORIGVALUE]",
+                    origValue
+                    if origValue.isdigit()
+                    else unescaper.escape(f"'{origValue}'"),
+                )
             if "[ORIGINAL]" in payload:
                 payload = getUnicode(payload).replace("[ORIGINAL]", origValue)
 
@@ -378,19 +396,21 @@ class Agent(object):
             if Backend.getIdentifiedDbms() is not None:
                 inference = queries[Backend.getIdentifiedDbms()].inference
 
-                if "dbms_version" in inference:
-                    if isDBMSVersionAtLeast(inference.dbms_version):
-                        inferenceQuery = inference.query
-                    else:
-                        inferenceQuery = inference.query2
-                else:
+                if (
+                    "dbms_version" in inference
+                    and isDBMSVersionAtLeast(inference.dbms_version)
+                    or "dbms_version" not in inference
+                ):
                     inferenceQuery = inference.query
-
+                else:
+                    inferenceQuery = inference.query2
                 payload = payload.replace(INFERENCE_MARKER, inferenceQuery)
 
             elif not kb.testMode:
-                errMsg = "invalid usage of inference payload without "
-                errMsg += "knowledge of underlying DBMS"
+                errMsg = (
+                    "invalid usage of inference payload without "
+                    + "knowledge of underlying DBMS"
+                )
                 raise SqlmapNoneDataException(errMsg)
 
         return payload

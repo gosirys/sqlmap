@@ -28,32 +28,30 @@ def getRevisionNumber():
         filePath = os.path.join(_, ".git", "HEAD")
         if os.path.exists(filePath):
             break
+        filePath = None
+        if _ == os.path.dirname(_):
+            break
         else:
-            filePath = None
-            if _ == os.path.dirname(_):
-                break
-            else:
-                _ = os.path.dirname(_)
+            _ = os.path.dirname(_)
 
     while True:
-        if filePath and os.path.isfile(filePath):
-            with openFile(filePath, "r") as f:
-                content = getText(f.read())
-                filePath = None
-
-                if content.startswith("ref: "):
-                    try:
-                        filePath = os.path.join(_, ".git", content.replace("ref: ", "")).strip()
-                    except UnicodeError:
-                        pass
-
-                if filePath is None:
-                    match = re.match(r"(?i)[0-9a-f]{32}", content)
-                    retVal = match.group(0) if match else None
-                    break
-        else:
+        if not filePath or not os.path.isfile(filePath):
             break
 
+        with openFile(filePath, "r") as f:
+            content = getText(f.read())
+            filePath = None
+
+            if content.startswith("ref: "):
+                try:
+                    filePath = os.path.join(_, ".git", content.replace("ref: ", "")).strip()
+                except UnicodeError:
+                    pass
+
+            if filePath is None:
+                match = re.match(r"(?i)[0-9a-f]{32}", content)
+                retVal = match.group(0) if match else None
+                break
     if not retVal:
         try:
             process = subprocess.Popen("git rev-parse --verify HEAD", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

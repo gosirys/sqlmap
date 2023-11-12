@@ -66,12 +66,15 @@ class FingerprintHandler(ContentHandler):
                 self._feedInfo("dbmsVersion", self._match.group(int(self._dbmsVersion)))
 
             if self._techVersion and self._techVersion.isdigit():
-                self._feedInfo("technology", "%s %s" % (attrs.get("technology"), self._match.group(int(self._techVersion))))
+                self._feedInfo(
+                    "technology",
+                    f'{attrs.get("technology")} {self._match.group(int(self._techVersion))}',
+                )
             else:
                 self._feedInfo("technology", attrs.get("technology"))
 
             if self._sp.isdigit():
-                self._feedInfo("sp", "Service Pack %s" % int(self._sp))
+                self._feedInfo("sp", f"Service Pack {int(self._sp)}")
 
             self._regexp = None
             self._match = None

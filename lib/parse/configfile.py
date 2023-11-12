@@ -39,16 +39,13 @@ def configFileProxy(section, option, datatype):
                 value = config.get(section, option)
         except ValueError as ex:
             errMsg = "error occurred while processing the option "
-            errMsg += "'%s' in provided configuration file ('%s')" % (option, getUnicode(ex))
+            errMsg += f"'{option}' in provided configuration file ('{getUnicode(ex)}')"
             raise SqlmapSyntaxException(errMsg)
 
-        if value:
-            conf[option] = value
-        else:
-            conf[option] = None
+        conf[option] = value if value else None
     else:
-        debugMsg = "missing requested option '%s' (section " % option
-        debugMsg += "'%s') into the configuration file, " % section
+        debugMsg = f"missing requested option '{option}' (section "
+        debugMsg += f"'{section}') into the configuration file, "
         debugMsg += "ignoring. Skipping to next."
         logger.debug(debugMsg)
 
@@ -70,23 +67,32 @@ def configFileParser(configFile):
         config = UnicodeRawConfigParser()
         config.readfp(configFP)
     except Exception as ex:
-        errMsg = "you have provided an invalid and/or unreadable configuration file ('%s')" % getSafeExString(ex)
+        errMsg = f"you have provided an invalid and/or unreadable configuration file ('{getSafeExString(ex)}')"
         raise SqlmapSyntaxException(errMsg)
 
     if not config.has_section("Target"):
         errMsg = "missing a mandatory section 'Target' in the configuration file"
         raise SqlmapMissingMandatoryOptionException(errMsg)
 
-    mandatory = False
-
-    for option in ("direct", "url", "logFile", "bulkFile", "googleDork", "requestFile", "wizard"):
-        if config.has_option("Target", option) and config.get("Target", option) or cmdLineOptions.get(option):
-            mandatory = True
-            break
-
+    mandatory = any(
+        config.has_option("Target", option)
+        and config.get("Target", option)
+        or cmdLineOptions.get(option)
+        for option in (
+            "direct",
+            "url",
+            "logFile",
+            "bulkFile",
+            "googleDork",
+            "requestFile",
+            "wizard",
+        )
+    )
     if not mandatory:
-        errMsg = "missing a mandatory option in the configuration file "
-        errMsg += "(direct, url, logFile, bulkFile, googleDork, requestFile or wizard)"
+        errMsg = (
+            "missing a mandatory option in the configuration file "
+            + "(direct, url, logFile, bulkFile, googleDork, requestFile or wizard)"
+        )
         raise SqlmapMissingMandatoryOptionException(errMsg)
 
     for family, optionData in optDict.items():

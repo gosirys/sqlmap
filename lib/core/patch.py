@@ -84,7 +84,9 @@ def dirtyPatches():
 
     match = re.search(r" --method[= ](\w+)", " ".join(sys.argv))
     if match and match.group(1).upper() != PLACE.POST:
-        PLACE.CUSTOM_POST = PLACE.CUSTOM_POST.replace("POST", "%s (body)" % match.group(1))
+        PLACE.CUSTOM_POST = PLACE.CUSTOM_POST.replace(
+            "POST", f"{match.group(1)} (body)"
+        )
 
     # https://github.com/sqlmapproject/sqlmap/issues/4314
     try:

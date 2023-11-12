@@ -87,7 +87,7 @@ class Dump(object):
             try:
                 self._outputFP.write(text)
             except IOError as ex:
-                errMsg = "error occurred while writing to log file ('%s')" % getSafeExString(ex)
+                errMsg = f"error occurred while writing to log file ('{getSafeExString(ex)}')"
                 raise SqlmapGenericException(errMsg)
 
             if multiThreadMode:
@@ -111,7 +111,7 @@ class Dump(object):
         try:
             self._outputFP = openFile(self._outputFile, "ab" if not conf.flushSession else "wb")
         except IOError as ex:
-            errMsg = "error occurred while opening log file ('%s')" % getSafeExString(ex)
+            errMsg = f"error occurred while opening log file ('{getSafeExString(ex)}')"
             raise SqlmapGenericException(errMsg)
 
     def singleString(self, data, content_type=None):
@@ -141,7 +141,9 @@ class Dump(object):
             if "\n" in _:
                 self._write("%s:\n---\n%s\n---" % (header, _))
             else:
-                self._write("%s: %s" % (header, ("'%s'" % _) if isinstance(data, six.string_types) else _))
+                self._write(
+                    f"""{header}: {f"'{_}'" if isinstance(data, six.string_types) else _}"""
+                )
 
     def lister(self, header, elements, content_type=None, sort=True):
         if elements and sort:
@@ -160,7 +162,7 @@ class Dump(object):
 
         for element in elements:
             if isinstance(element, six.string_types):
-                self._write("[*] %s" % element)
+                self._write(f"[*] {element}")
             elif isListLike(element):
                 self._write("[*] " + ", ".join(getUnicode(e) for e in element))
 
@@ -175,9 +177,17 @@ class Dump(object):
 
     def currentDb(self, data):
         if Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.PGSQL, DBMS.HSQLDB, DBMS.H2, DBMS.MONETDB, DBMS.VERTICA, DBMS.CRATEDB, DBMS.CACHE, DBMS.FRONTBASE):
-            self.string("current database (equivalent to schema on %s)" % Backend.getIdentifiedDbms(), data, content_type=CONTENT_TYPE.CURRENT_DB)
+            self.string(
+                f"current database (equivalent to schema on {Backend.getIdentifiedDbms()})",
+                data,
+                content_type=CONTENT_TYPE.CURRENT_DB,
+            )
         elif Backend.getIdentifiedDbms() in (DBMS.ALTIBASE, DBMS.DB2, DBMS.MIMERSQL, DBMS.MAXDB, DBMS.VIRTUOSO):
-            self.string("current database (equivalent to owner on %s)" % Backend.getIdentifiedDbms(), data, content_type=CONTENT_TYPE.CURRENT_DB)
+            self.string(
+                f"current database (equivalent to owner on {Backend.getIdentifiedDbms()})",
+                data,
+                content_type=CONTENT_TYPE.CURRENT_DB,
+            )
         else:
             self.string("current database", data, content_type=CONTENT_TYPE.CURRENT_DB)
 
@@ -207,26 +217,22 @@ class Dump(object):
             self._write(userSettings, content_type=content_type)
 
         if userSettings:
-            self._write("%s:" % header)
+            self._write(f"{header}:")
 
         for user in users:
             settings = filterNone(userSettings[user])
 
-            if isNoneValue(settings):
-                stringSettings = ""
-            else:
-                stringSettings = " [%d]:" % len(settings)
-
+            stringSettings = "" if isNoneValue(settings) else " [%d]:" % len(settings)
             if user in self._areAdmins:
-                self._write("[*] %s (administrator)%s" % (user, stringSettings))
+                self._write(f"[*] {user} (administrator){stringSettings}")
             else:
-                self._write("[*] %s%s" % (user, stringSettings))
+                self._write(f"[*] {user}{stringSettings}")
 
             if settings:
                 settings.sort()
 
                 for setting in settings:
-                    self._write("    %s: %s" % (subHeader, setting))
+                    self._write(f"    {subHeader}: {setting}")
 
         if userSettings:
             self.singleString("")
@@ -253,14 +259,18 @@ class Dump(object):
             for db, tables in dbTables.items():
                 tables = sorted(filter(None, tables))
 
-                self._write("Database: %s" % unsafeSQLIdentificatorNaming(db) if db and METADB_SUFFIX not in db else "<current>")
+                self._write(
+                    f"Database: {unsafeSQLIdentificatorNaming(db)}"
+                    if db and METADB_SUFFIX not in db
+                    else "<current>"
+                )
 
                 if len(tables) == 1:
                     self._write("[1 table]")
                 else:
                     self._write("[%d tables]" % len(tables))
 
-                self._write("+%s+" % lines)
+                self._write(f"+{lines}+")
 
                 for table in tables:
                     if table and isListLike(table):
@@ -268,7 +278,7 @@ class Dump(object):
 
                     table = unsafeSQLIdentificatorNaming(table)
                     blank = " " * (maxlength - getConsoleLength(getUnicode(table)))
-                    self._write("| %s%s |" % (table, blank))
+                    self._write(f"| {table}{blank} |")
 
                 self._write("+%s+\n" % lines)
         elif dbTables is None or len(dbTables) == 0:
@@ -277,77 +287,77 @@ class Dump(object):
             self.string("tables", dbTables, content_type=CONTENT_TYPE.TABLES)
 
     def dbTableColumns(self, tableColumns, content_type=None):
-        if isinstance(tableColumns, dict) and len(tableColumns) > 0:
-            if conf.api:
-                self._write(tableColumns, content_type=content_type)
+        if not isinstance(tableColumns, dict) or len(tableColumns) <= 0:
+            return
+        if conf.api:
+            self._write(tableColumns, content_type=content_type)
 
-            for db, tables in tableColumns.items():
-                if not db:
-                    db = "All"
+        for db, tables in tableColumns.items():
+            if not db:
+                db = "All"
 
-                for table, columns in tables.items():
-                    maxlength1 = 0
-                    maxlength2 = 0
+            for table, columns in tables.items():
+                maxlength1 = 0
+                maxlength2 = 0
 
-                    colType = None
+                colType = None
 
-                    colList = list(columns.keys())
-                    colList.sort(key=lambda _: _.lower() if hasattr(_, "lower") else _)
+                colList = list(columns.keys())
+                colList.sort(key=lambda _: _.lower() if hasattr(_, "lower") else _)
 
-                    for column in colList:
-                        colType = columns[column]
+                for column in colList:
+                    colType = columns[column]
 
-                        column = unsafeSQLIdentificatorNaming(column)
-                        maxlength1 = max(maxlength1, len(column or ""))
-                        maxlength2 = max(maxlength2, len(colType or ""))
+                    column = unsafeSQLIdentificatorNaming(column)
+                    maxlength1 = max(maxlength1, len(column or ""))
+                    maxlength2 = max(maxlength2, len(colType or ""))
 
-                    maxlength1 = max(maxlength1, len("COLUMN"))
-                    lines1 = "-" * (maxlength1 + 2)
+                maxlength1 = max(maxlength1, len("COLUMN"))
+                lines1 = "-" * (maxlength1 + 2)
+
+                if colType is not None:
+                    maxlength2 = max(maxlength2, len("TYPE"))
+                    lines2 = "-" * (maxlength2 + 2)
+
+                self._write("Database: %s\nTable: %s" % (unsafeSQLIdentificatorNaming(db) if db and METADB_SUFFIX not in db else "<current>", unsafeSQLIdentificatorNaming(table)))
+
+                if len(columns) == 1:
+                    self._write("[1 column]")
+                else:
+                    self._write("[%d columns]" % len(columns))
+
+                if colType is not None:
+                    self._write(f"+{lines1}+{lines2}+")
+                else:
+                    self._write(f"+{lines1}+")
+
+                blank1 = " " * (maxlength1 - len("COLUMN"))
+
+                if colType is not None:
+                    blank2 = " " * (maxlength2 - len("TYPE"))
+
+                    self._write(f"| Column{blank1} | Type{blank2} |")
+                    self._write(f"+{lines1}+{lines2}+")
+                else:
+                    self._write(f"| Column{blank1} |")
+                    self._write(f"+{lines1}+")
+
+                for column in colList:
+                    colType = columns[column]
+
+                    column = unsafeSQLIdentificatorNaming(column)
+                    blank1 = " " * (maxlength1 - len(column))
 
                     if colType is not None:
-                        maxlength2 = max(maxlength2, len("TYPE"))
-                        lines2 = "-" * (maxlength2 + 2)
-
-                    self._write("Database: %s\nTable: %s" % (unsafeSQLIdentificatorNaming(db) if db and METADB_SUFFIX not in db else "<current>", unsafeSQLIdentificatorNaming(table)))
-
-                    if len(columns) == 1:
-                        self._write("[1 column]")
+                        blank2 = " " * (maxlength2 - len(colType))
+                        self._write(f"| {column}{blank1} | {colType}{blank2} |")
                     else:
-                        self._write("[%d columns]" % len(columns))
+                        self._write(f"| {column}{blank1} |")
 
-                    if colType is not None:
-                        self._write("+%s+%s+" % (lines1, lines2))
-                    else:
-                        self._write("+%s+" % lines1)
-
-                    blank1 = " " * (maxlength1 - len("COLUMN"))
-
-                    if colType is not None:
-                        blank2 = " " * (maxlength2 - len("TYPE"))
-
-                    if colType is not None:
-                        self._write("| Column%s | Type%s |" % (blank1, blank2))
-                        self._write("+%s+%s+" % (lines1, lines2))
-                    else:
-                        self._write("| Column%s |" % blank1)
-                        self._write("+%s+" % lines1)
-
-                    for column in colList:
-                        colType = columns[column]
-
-                        column = unsafeSQLIdentificatorNaming(column)
-                        blank1 = " " * (maxlength1 - len(column))
-
-                        if colType is not None:
-                            blank2 = " " * (maxlength2 - len(colType))
-                            self._write("| %s%s | %s%s |" % (column, blank1, colType, blank2))
-                        else:
-                            self._write("| %s%s |" % (column, blank1))
-
-                    if colType is not None:
-                        self._write("+%s+%s+\n" % (lines1, lines2))
-                    else:
-                        self._write("+%s+\n" % lines1)
+                if colType is not None:
+                    self._write("+%s+%s+\n" % (lines1, lines2))
+                else:
+                    self._write("+%s+\n" % lines1)
 
     def dbTablesCount(self, dbTables):
         if isinstance(dbTables, dict) and len(dbTables) > 0:
@@ -363,16 +373,20 @@ class Dump(object):
                         maxlength1 = max(maxlength1, getConsoleLength(getUnicode(table)))
 
             for db, counts in dbTables.items():
-                self._write("Database: %s" % unsafeSQLIdentificatorNaming(db) if db and METADB_SUFFIX not in db else "<current>")
+                self._write(
+                    f"Database: {unsafeSQLIdentificatorNaming(db)}"
+                    if db and METADB_SUFFIX not in db
+                    else "<current>"
+                )
 
                 lines1 = "-" * (maxlength1 + 2)
                 blank1 = " " * (maxlength1 - len("Table"))
                 lines2 = "-" * (maxlength2 + 2)
                 blank2 = " " * (maxlength2 - len("Entries"))
 
-                self._write("+%s+%s+" % (lines1, lines2))
-                self._write("| Table%s | Entries%s |" % (blank1, blank2))
-                self._write("+%s+%s+" % (lines1, lines2))
+                self._write(f"+{lines1}+{lines2}+")
+                self._write(f"| Table{blank1} | Entries{blank2} |")
+                self._write(f"+{lines1}+{lines2}+")
 
                 sortedCounts = list(counts.keys())
                 sortedCounts.sort(reverse=True)

@@ -46,7 +46,7 @@ def blockingReadFromFD(fd):
         break
 
     if not output:
-        raise EOFError("fd %s has been closed." % fd)
+        raise EOFError(f"fd {fd} has been closed.")
 
     return output
 
@@ -170,15 +170,11 @@ class Popen(subprocess.Popen):
                     fcntl.fcntl(conn, fcntl.F_SETFL, flags)
 
 def recv_some(p, t=.1, e=1, tr=5, stderr=0):
-    if tr < 1:
-        tr = 1
+    tr = max(tr, 1)
     x = time.time() + t
     y = []
     r = ''
-    if stderr:
-        pr = p.recv_err
-    else:
-        pr = p.recv
+    pr = p.recv_err if stderr else p.recv
     while time.time() < x or r:
         r = pr()
         if r is None:

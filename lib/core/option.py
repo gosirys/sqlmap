@@ -207,7 +207,7 @@ def _loadQueries():
         tree.parse(paths.QUERIES_XML)
     except Exception as ex:
         errMsg = "something appears to be wrong with "
-        errMsg += "the file '%s' ('%s'). Please make " % (paths.QUERIES_XML, getSafeExString(ex))
+        errMsg += f"the file '{paths.QUERIES_XML}' ('{getSafeExString(ex)}'). Please make "
         errMsg += "sure that you haven't made any changes to it"
         raise SqlmapInstallationException(errMsg)
 
@@ -226,7 +226,7 @@ def _setMultipleTargets():
     if not conf.logFile:
         return
 
-    debugMsg = "parsing targets list from '%s'" % conf.logFile
+    debugMsg = f"parsing targets list from '{conf.logFile}'"
     logger.debug(debugMsg)
 
     if not os.path.exists(conf.logFile):
@@ -236,7 +236,12 @@ def _setMultipleTargets():
     if checkFile(conf.logFile, False):
         for target in parseRequestFile(conf.logFile):
             url, _, data, _, _ = target
-            key = re.sub(r"(\w+=)[^%s ]*" % (conf.paramDel or DEFAULT_GET_POST_DELIMITER), r"\g<1>", "%s %s" % (url, data))
+            key = re.sub(
+                r"(\w+=)[^%s ]*"
+                % (conf.paramDel or DEFAULT_GET_POST_DELIMITER),
+                r"\g<1>",
+                f"{url} {data}",
+            )
             if key not in seen:
                 kb.targets.add(target)
                 seen.add(key)
@@ -251,14 +256,18 @@ def _setMultipleTargets():
 
             for target in parseRequestFile(os.path.join(conf.logFile, reqFile)):
                 url, _, data, _, _ = target
-                key = re.sub(r"(\w+=)[^%s ]*" % (conf.paramDel or DEFAULT_GET_POST_DELIMITER), r"\g<1>", "%s %s" % (url, data))
+                key = re.sub(
+                    r"(\w+=)[^%s ]*"
+                    % (conf.paramDel or DEFAULT_GET_POST_DELIMITER),
+                    r"\g<1>",
+                    f"{url} {data}",
+                )
                 if key not in seen:
                     kb.targets.add(target)
                     seen.add(key)
 
     else:
-        errMsg = "the specified list of targets is not a file "
-        errMsg += "nor a directory"
+        errMsg = "the specified list of targets is not a file " + "nor a directory"
         raise SqlmapFilePathException(errMsg)
 
     updatedTargetsCount = len(kb.targets)
@@ -302,11 +311,11 @@ def _setRequestFromFile():
             seen = set()
 
             if not checkFile(requestFile, False):
-                errMsg = "specified HTTP request file '%s' " % requestFile
+                errMsg = f"specified HTTP request file '{requestFile}' "
                 errMsg += "does not exist"
                 raise SqlmapFilePathException(errMsg)
 
-            infoMsg = "parsing HTTP request from '%s'" % requestFile
+            infoMsg = f"parsing HTTP request from '{requestFile}'"
             logger.info(infoMsg)
 
             for target in parseRequestFile(requestFile):
@@ -318,7 +327,7 @@ def _setRequestFromFile():
                     seen.add(url)
 
             if url is None:
-                errMsg = "specified file '%s' " % requestFile
+                errMsg = f"specified file '{requestFile}' "
                 errMsg += "does not contain a usable HTTP request (with parameters)"
                 raise SqlmapDataException(errMsg)
 
@@ -326,18 +335,18 @@ def _setRequestFromFile():
         conf.secondReq = safeExpandUser(conf.secondReq)
 
         if not checkFile(conf.secondReq, False):
-            errMsg = "specified second-order HTTP request file '%s' " % conf.secondReq
+            errMsg = f"specified second-order HTTP request file '{conf.secondReq}' "
             errMsg += "does not exist"
             raise SqlmapFilePathException(errMsg)
 
-        infoMsg = "parsing second-order HTTP request from '%s'" % conf.secondReq
+        infoMsg = f"parsing second-order HTTP request from '{conf.secondReq}'"
         logger.info(infoMsg)
 
         try:
             target = next(parseRequestFile(conf.secondReq, False))
             kb.secondReq = target
         except StopIteration:
-            errMsg = "specified second-order HTTP request file '%s' " % conf.secondReq
+            errMsg = f"specified second-order HTTP request file '{conf.secondReq}' "
             errMsg += "does not contain a valid HTTP request"
             raise SqlmapDataException(errMsg)
 
@@ -394,11 +403,7 @@ def _doSearch():
             if not conf.forms:
                 infoMsg += ", "
 
-                if len(links) == len(kb.targets):
-                    infoMsg += "all "
-                else:
-                    infoMsg += "%d " % len(kb.targets)
-
+                infoMsg += "all " if len(links) == len(kb.targets) else "%d " % len(kb.targets)
                 infoMsg += "of them are testable targets"
 
             logger.info(infoMsg)
@@ -423,6 +428,8 @@ def _setStdinPipeTargets():
         infoMsg = "using 'STDIN' for parsing targets list"
         logger.info(infoMsg)
 
+
+
         class _(object):
             def __init__(self):
                 self.__rest = OrderedSet()
@@ -440,8 +447,11 @@ def _setStdinPipeTargets():
                     line = None
 
                 if line:
-                    match = re.search(r"\b(https?://[^\s'\"]+|[\w.]+\.\w{2,3}[/\w+]*\?[^\s'\"]+)", line, re.I)
-                    if match:
+                    if match := re.search(
+                        r"\b(https?://[^\s'\"]+|[\w.]+\.\w{2,3}[/\w+]*\?[^\s'\"]+)",
+                        line,
+                        re.I,
+                    ):
                         return (match.group(0), conf.method, conf.data, conf.cookie, None)
                 elif self.__rest:
                     return self.__rest.pop()
@@ -451,6 +461,7 @@ def _setStdinPipeTargets():
             def add(self, elem):
                 self.__rest.add(elem)
 
+
         kb.targets = _()
 
 def _setBulkMultipleTargets():
@@ -459,12 +470,11 @@ def _setBulkMultipleTargets():
 
     conf.bulkFile = safeExpandUser(conf.bulkFile)
 
-    infoMsg = "parsing multiple targets list from '%s'" % conf.bulkFile
+    infoMsg = f"parsing multiple targets list from '{conf.bulkFile}'"
     logger.info(infoMsg)
 
     if not checkFile(conf.bulkFile, False):
-        errMsg = "the specified bulk file "
-        errMsg += "does not exist"
+        errMsg = "the specified bulk file " + "does not exist"
         raise SqlmapFilePathException(errMsg)
 
     found = False
@@ -509,7 +519,7 @@ def _findPageForms():
                 target = targets[i].strip()
 
                 if not re.search(r"(?i)\Ahttp[s]*://", target):
-                    target = "http://%s" % target
+                    target = f"http://{target}"
 
                 page, _, _ = Request.getPage(url=target.strip(), cookie=conf.cookie, crawling=True, raise404=False)
                 if findPageForms(page, target, False, True):
@@ -521,7 +531,7 @@ def _findPageForms():
             except KeyboardInterrupt:
                 break
             except Exception as ex:
-                errMsg = "problem occurred while searching for forms at '%s' ('%s')" % (target, getSafeExString(ex))
+                errMsg = f"problem occurred while searching for forms at '{target}' ('{getSafeExString(ex)}')"
                 logger.error(errMsg)
 
     if not found:
@@ -543,8 +553,10 @@ def _setDBMSAuthentication():
     match = re.search(r"^(.+?):(.*?)$", conf.dbmsCred)
 
     if not match:
-        errMsg = "DBMS authentication credentials value must be in format "
-        errMsg += "username:password"
+        errMsg = (
+            "DBMS authentication credentials value must be in format "
+            + "username:password"
+        )
         raise SqlmapSyntaxException(errMsg)
 
     conf.dbmsUsername = match.group(1)
@@ -563,8 +575,10 @@ def _setMetasploit():
         try:
             __import__("win32file")
         except ImportError:
-            errMsg = "sqlmap requires third-party module 'pywin32' "
-            errMsg += "in order to use Metasploit functionalities on "
+            errMsg = (
+                "sqlmap requires third-party module 'pywin32' "
+                + "in order to use Metasploit functionalities on "
+            )
             errMsg += "Windows. You can download it from "
             errMsg += "'https://github.com/mhammond/pywin32'"
             raise SqlmapMissingDependence(errMsg)
@@ -579,19 +593,46 @@ def _setMetasploit():
         isAdmin = runningAsAdmin()
 
         if not isAdmin:
-            errMsg = "you need to run sqlmap as an administrator "
-            errMsg += "if you want to perform a SMB relay attack because "
+            errMsg = (
+                "you need to run sqlmap as an administrator "
+                + "if you want to perform a SMB relay attack because "
+            )
             errMsg += "it will need to listen on a user-specified SMB "
             errMsg += "TCP port for incoming connection attempts"
             raise SqlmapMissingPrivileges(errMsg)
 
     if conf.msfPath:
         for path in (conf.msfPath, os.path.join(conf.msfPath, "bin")):
-            if any(os.path.exists(normalizePath(os.path.join(path, "%s%s" % (_, ".bat" if IS_WIN else "")))) for _ in ("msfcli", "msfconsole")):
+            if any(
+                os.path.exists(
+                    normalizePath(
+                        os.path.join(path, f'{_}{".bat" if IS_WIN else ""}')
+                    )
+                )
+                for _ in ("msfcli", "msfconsole")
+            ):
                 msfEnvPathExists = True
-                if all(os.path.exists(normalizePath(os.path.join(path, "%s%s" % (_, ".bat" if IS_WIN else "")))) for _ in ("msfvenom",)):
+                if all(
+                    os.path.exists(
+                        normalizePath(
+                            os.path.join(
+                                path, f'{_}{".bat" if IS_WIN else ""}'
+                            )
+                        )
+                    )
+                    for _ in ("msfvenom",)
+                ):
                     kb.oldMsf = False
-                elif all(os.path.exists(normalizePath(os.path.join(path, "%s%s" % (_, ".bat" if IS_WIN else "")))) for _ in ("msfencode", "msfpayload")):
+                elif all(
+                    os.path.exists(
+                        normalizePath(
+                            os.path.join(
+                                path, f'{_}{".bat" if IS_WIN else ""}'
+                            )
+                        )
+                    )
+                    for _ in ("msfencode", "msfpayload")
+                ):
                     kb.oldMsf = True
                 else:
                     msfEnvPathExists = False
@@ -601,24 +642,28 @@ def _setMetasploit():
 
         if msfEnvPathExists:
             debugMsg = "provided Metasploit Framework path "
-            debugMsg += "'%s' is valid" % conf.msfPath
+            debugMsg += f"'{conf.msfPath}' is valid"
             logger.debug(debugMsg)
         else:
             warnMsg = "the provided Metasploit Framework path "
-            warnMsg += "'%s' is not valid. The cause could " % conf.msfPath
+            warnMsg += f"'{conf.msfPath}' is not valid. The cause could "
             warnMsg += "be that the path does not exists or that one "
             warnMsg += "or more of the needed Metasploit executables "
             warnMsg += "within msfcli, msfconsole, msfencode and "
             warnMsg += "msfpayload do not exist"
             logger.warning(warnMsg)
     else:
-        warnMsg = "you did not provide the local path where Metasploit "
-        warnMsg += "Framework is installed"
+        warnMsg = (
+            "you did not provide the local path where Metasploit "
+            + "Framework is installed"
+        )
         logger.warning(warnMsg)
 
     if not msfEnvPathExists:
-        warnMsg = "sqlmap is going to look for Metasploit Framework "
-        warnMsg += "installation inside the environment path(s)"
+        warnMsg = (
+            "sqlmap is going to look for Metasploit Framework "
+            + "installation inside the environment path(s)"
+        )
         logger.warning(warnMsg)
 
         envPaths = os.environ.get("PATH", "").split(";" if IS_WIN else ":")
@@ -626,18 +671,43 @@ def _setMetasploit():
         for envPath in envPaths:
             envPath = envPath.replace(";", "")
 
-            if any(os.path.exists(normalizePath(os.path.join(envPath, "%s%s" % (_, ".bat" if IS_WIN else "")))) for _ in ("msfcli", "msfconsole")):
+            if any(
+                os.path.exists(
+                    normalizePath(
+                        os.path.join(envPath, f'{_}{".bat" if IS_WIN else ""}')
+                    )
+                )
+                for _ in ("msfcli", "msfconsole")
+            ):
                 msfEnvPathExists = True
-                if all(os.path.exists(normalizePath(os.path.join(envPath, "%s%s" % (_, ".bat" if IS_WIN else "")))) for _ in ("msfvenom",)):
+                if all(
+                    os.path.exists(
+                        normalizePath(
+                            os.path.join(
+                                envPath, f'{_}{".bat" if IS_WIN else ""}'
+                            )
+                        )
+                    )
+                    for _ in ("msfvenom",)
+                ):
                     kb.oldMsf = False
-                elif all(os.path.exists(normalizePath(os.path.join(envPath, "%s%s" % (_, ".bat" if IS_WIN else "")))) for _ in ("msfencode", "msfpayload")):
+                elif all(
+                    os.path.exists(
+                        normalizePath(
+                            os.path.join(
+                                envPath, f'{_}{".bat" if IS_WIN else ""}'
+                            )
+                        )
+                    )
+                    for _ in ("msfencode", "msfpayload")
+                ):
                     kb.oldMsf = True
                 else:
                     msfEnvPathExists = False
 
                 if msfEnvPathExists:
                     infoMsg = "Metasploit Framework has been found "
-                    infoMsg += "installed in the '%s' path" % envPath
+                    infoMsg += f"installed in the '{envPath}' path"
                     logger.info(infoMsg)
 
                     conf.msfPath = envPath
@@ -645,8 +715,10 @@ def _setMetasploit():
                     break
 
     if not msfEnvPathExists:
-        errMsg = "unable to locate Metasploit Framework installation. "
-        errMsg += "You can get it at 'https://www.metasploit.com/download/'"
+        errMsg = (
+            "unable to locate Metasploit Framework installation. "
+            + "You can get it at 'https://www.metasploit.com/download/'"
+        )
         raise SqlmapFilePathException(errMsg)
 
 def _setWriteFile():
@@ -657,12 +729,12 @@ def _setWriteFile():
     logger.debug(debugMsg)
 
     if not os.path.exists(conf.fileWrite):
-        errMsg = "the provided local file '%s' does not exist" % conf.fileWrite
+        errMsg = f"the provided local file '{conf.fileWrite}' does not exist"
         raise SqlmapFilePathException(errMsg)
 
     if not conf.fileDest:
         errMsg = "you did not provide the back-end DBMS absolute path "
-        errMsg += "where you want to write the local file '%s'" % conf.fileWrite
+        errMsg += f"where you want to write the local file '{conf.fileWrite}'"
         raise SqlmapMissingMandatoryOptionException(errMsg)
 
     conf.fileWriteType = getFileType(conf.fileWrite)
@@ -676,40 +748,43 @@ def _setOS():
         return
 
     if conf.os.lower() not in SUPPORTED_OS:
-        errMsg = "you provided an unsupported back-end DBMS operating "
-        errMsg += "system. The supported DBMS operating systems for OS "
-        errMsg += "and file system access are %s. " % ', '.join([o.capitalize() for o in SUPPORTED_OS])
+        errMsg = (
+            "you provided an unsupported back-end DBMS operating "
+            + "system. The supported DBMS operating systems for OS "
+        )
+        errMsg += f"and file system access are {', '.join([o.capitalize() for o in SUPPORTED_OS])}. "
         errMsg += "If you do not know the back-end DBMS underlying OS, "
         errMsg += "do not provide it and sqlmap will fingerprint it for "
         errMsg += "you."
         raise SqlmapUnsupportedDBMSException(errMsg)
 
     debugMsg = "forcing back-end DBMS operating system to user defined "
-    debugMsg += "value '%s'" % conf.os
+    debugMsg += f"value '{conf.os}'"
     logger.debug(debugMsg)
 
     Backend.setOs(conf.os)
 
 def _setTechnique():
+    if not conf.technique or not isinstance(conf.technique, six.string_types):
+        return
+    _ = []
+
     validTechniques = sorted(getPublicTypeMembers(PAYLOAD.TECHNIQUE), key=lambda x: x[1])
     validLetters = [_[0][0].upper() for _ in validTechniques]
 
-    if conf.technique and isinstance(conf.technique, six.string_types):
-        _ = []
+    for letter in conf.technique.upper():
+        if letter not in validLetters:
+            errMsg = "value for --technique must be a string composed "
+            errMsg += f'by the letters {", ".join(validLetters)}. Refer to the '
+            errMsg += "user's manual for details"
+            raise SqlmapSyntaxException(errMsg)
 
-        for letter in conf.technique.upper():
-            if letter not in validLetters:
-                errMsg = "value for --technique must be a string composed "
-                errMsg += "by the letters %s. Refer to the " % ", ".join(validLetters)
-                errMsg += "user's manual for details"
-                raise SqlmapSyntaxException(errMsg)
+        for validTech, validInt in validTechniques:
+            if letter == validTech[0]:
+                _.append(validInt)
+                break
 
-            for validTech, validInt in validTechniques:
-                if letter == validTech[0]:
-                    _.append(validInt)
-                    break
-
-        conf.technique = _
+    conf.technique = _
 
 def _setDBMS():
     """
@@ -723,15 +798,20 @@ def _setDBMS():
     logger.debug(debugMsg)
 
     conf.dbms = conf.dbms.lower()
-    regex = re.search(r"%s ([\d\.]+)" % ("(%s)" % "|".join(SUPPORTED_DBMS)), conf.dbms, re.I)
-
-    if regex:
+    if regex := re.search(
+        r"%s ([\d\.]+)" % f'({"|".join(SUPPORTED_DBMS)})', conf.dbms, re.I
+    ):
         conf.dbms = regex.group(1)
         Backend.setVersion(regex.group(2))
 
     if conf.dbms not in SUPPORTED_DBMS:
         errMsg = "you provided an unsupported back-end database management "
-        errMsg += "system. Supported DBMSes are as follows: %s. " % ', '.join(sorted((_ for _ in (list(DBMS_DICT) + getPublicTypeMembers(FORK, True))), key=str.lower))
+        errMsg += "system. Supported DBMSes are as follows: %s. " % ', '.join(
+            sorted(
+                iter(list(DBMS_DICT) + getPublicTypeMembers(FORK, True)),
+                key=str.lower,
+            )
+        )
         errMsg += "If you do not know the back-end DBMS, do not provide "
         errMsg += "it and sqlmap will fingerprint it for you."
         raise SqlmapUnsupportedDBMSException(errMsg)
@@ -753,8 +833,7 @@ def _listTamperingFunctions():
 
         for script in sorted(glob.glob(os.path.join(paths.SQLMAP_TAMPER_PATH, "*.py"))):
             content = openFile(script, "rb").read()
-            match = re.search(r'(?s)__priority__.+"""(.+)"""', content)
-            if match:
+            if match := re.search(r'(?s)__priority__.+"""(.+)"""', content):
                 comment = match.group(1).strip()
                 dataToStdout("* %s - %s\n" % (setColor(os.path.basename(script), "yellow"), re.sub(r" *\n *", " ", comment.split("\n\n")[0].strip())))
 

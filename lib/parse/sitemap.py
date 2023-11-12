@@ -21,7 +21,7 @@ def parseSitemap(url, retVal=None):
     global abortedFlag
 
     if retVal is not None:
-        logger.debug("parsing sitemap '%s'" % url)
+        logger.debug(f"parsing sitemap '{url}'")
 
     try:
         if retVal is None:
@@ -31,7 +31,7 @@ def parseSitemap(url, retVal=None):
         try:
             content = Request.getPage(url=url, raise404=True)[0] if not abortedFlag else ""
         except _http_client.InvalidURL:
-            errMsg = "invalid URL given for sitemap ('%s')" % url
+            errMsg = f"invalid URL given for sitemap ('{url}')"
             raise SqlmapSyntaxException(errMsg)
 
         for match in re.finditer(r"<loc>\s*([^<]+)", content or ""):
@@ -49,8 +49,10 @@ def parseSitemap(url, retVal=None):
 
     except KeyboardInterrupt:
         abortedFlag = True
-        warnMsg = "user aborted during sitemap parsing. sqlmap "
-        warnMsg += "will use partial list"
+        warnMsg = (
+            "user aborted during sitemap parsing. sqlmap "
+            + "will use partial list"
+        )
         logger.warning(warnMsg)
 
     return retVal

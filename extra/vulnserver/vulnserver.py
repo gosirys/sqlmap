@@ -110,7 +110,19 @@ class ReqHandler(BaseHTTPRequestHandler):
             if self.data.startswith('{') and self.data.endswith('}'):
                 params.update(json.loads(self.data))
             elif self.data.startswith('<') and self.data.endswith('>'):
-                params.update(dict((_[0], _[1].replace("&apos;", "'").replace("&quot;", '"').replace("&lt;", '<').replace("&gt;", '>').replace("&amp;", '&')) for _ in re.findall(r'name="([^"]+)" value="([^"]*)"', self.data)))
+                params.update(
+                    {
+                        _[0]: _[1]
+                        .replace("&apos;", "'")
+                        .replace("&quot;", '"')
+                        .replace("&lt;", '<')
+                        .replace("&gt;", '>')
+                        .replace("&amp;", '&')
+                        for _ in re.findall(
+                            r'name="([^"]+)" value="([^"]*)"', self.data
+                        )
+                    }
+                )
             else:
                 self.data = self.data.replace(';', '&')     # Note: seems that Python3 started ignoring parameter splitting with ';'
                 params.update(parse_qs(self.data))
@@ -125,16 +137,16 @@ class ReqHandler(BaseHTTPRequestHandler):
                     name, value = part.split('=', 1)
                     params[name.strip()] = unquote_plus(value.strip())
 
-        for key in params:
-            if params[key] and isinstance(params[key], (tuple, list)):
+        for key, value_ in params.items():
+            if value_ and isinstance(params[key], (tuple, list)):
                 params[key] = params[key][-1]
 
         self.url, self.params = path, params
 
         if self.url == '/':
-            if not any(_ in self.params for _ in ("id", "query")):
+            if all(_ not in self.params for _ in ("id", "query")):
                 self.send_response(OK)
-                self.send_header("Content-type", "text/html; charset=%s" % UNICODE_ENCODING)
+                self.send_header("Content-type", f"text/html; charset={UNICODE_ENCODING}")
                 self.send_header("Connection", "close")
                 self.end_headers()
                 self.wfile.write(b"<!DOCTYPE html><html><head><title>vulnserver</title></head><body><h3>GET:</h3><a href='/?id=1'>link</a><hr><h3>POST:</h3><form method='post'>ID: <input type='text' name='id'><input type='submit' value='Submit'></form></body></html>")
@@ -143,19 +155,25 @@ class ReqHandler(BaseHTTPRequestHandler):
 
                 try:
                     if self.params.get("echo", ""):
-                        output += "%s<br>" % self.params["echo"]
+                        output += f'{self.params["echo"]}<br>'
 
                     if self.params.get("reflect", ""):
-                        output += "%s<br>" % self.params.get("id")
+                        output += f'{self.params.get("id")}<br>'
 
                     with _lock:
                         if "query" in self.params:
                             _cursor.execute(self.params["query"])
                         elif "id" in self.params:
                             if "base64" in self.params:
-                                _cursor.execute("SELECT * FROM users WHERE id=%s LIMIT 0, 1" % base64.b64decode("%s===" % self.params["id"], altchars=self.params.get("altchars")).decode())
+                                _cursor.execute(
+                                    "SELECT * FROM users WHERE id=%s LIMIT 0, 1"
+                                    % base64.b64decode(
+                                        f'{self.params["id"]}===',
+                                        altchars=self.params.get("altchars"),
+                                    ).decode()
+                                )
                             else:
-                                _cursor.execute("SELECT * FROM users WHERE id=%s LIMIT 0, 1" % self.params["id"])
+                                _cursor.execute(f'SELECT * FROM users WHERE id={self.params["id"]} LIMIT 0, 1')
                         results = _cursor.fetchall()
 
                     output += "<b>SQL results:</b><br>\n"
@@ -163,24 +181,23 @@ class ReqHandler(BaseHTTPRequestHandler):
                     if self.params.get("code", ""):
                         if not results:
                             code = INTERNAL_SERVER_ERROR
+                    elif results:
+                        output += "<table border=\"1\">\n"
+
+                        for row in results:
+                            output += "<tr>"
+                            for value in row:
+                                output += f"<td>{value}</td>"
+                            output += "</tr>\n"
+
+                        output += "</table>\n"
                     else:
-                        if results:
-                            output += "<table border=\"1\">\n"
-
-                            for row in results:
-                                output += "<tr>"
-                                for value in row:
-                                    output += "<td>%s</td>" % value
-                                output += "</tr>\n"
-
-                            output += "</table>\n"
-                        else:
-                            output += "no results found"
+                        output += "no results found"
 
                     output += "</body></html>"
                 except Exception as ex:
                     code = INTERNAL_SERVER_ERROR
-                    output = "%s: %s" % (re.search(r"'([^']+)'", str(type(ex))).group(1), ex)
+                    output = f"""{re.search("'([^']+)'", str(type(ex))).group(1)}: {ex}"""
 
                 self.send_response(code)
 
@@ -208,8 +225,7 @@ class ReqHandler(BaseHTTPRequestHandler):
         self.do_REQUEST()
 
     def do_POST(self):
-        length = int(self.headers.get("Content-length", 0))
-        if length:
+        if length := int(self.headers.get("Content-length", 0)):
             data = self.rfile.read(length)
             data = unquote_plus(data.decode(UNICODE_ENCODING, "ignore"))
             self.data = data
@@ -221,12 +237,11 @@ class ReqHandler(BaseHTTPRequestHandler):
                 line += self.rfile.read(1)
                 if line.endswith(b'\n'):
                     if count % 2 == 1:
-                        current = line.rstrip(b"\r\n")
-                        if not current:
-                            break
-                        else:
+                        if current := line.rstrip(b"\r\n"):
                             data += current
 
+                        else:
+                            break
                     count += 1
                     line = b""
 

@@ -20,19 +20,18 @@ def convert(inputFile):
     fileSize = fileStat.st_size
 
     if fileSize > 65280:
-        print("ERROR: the provided input file '%s' is too big for debug.exe" % inputFile)
+        print(f"ERROR: the provided input file '{inputFile}' is too big for debug.exe")
         sys.exit(1)
 
     script = "n %s\nr cx\n" % os.path.basename(inputFile.replace(".", "_"))
     script += "%x\nf 0100 ffff 00\n" % fileSize
     scrString = ""
-    counter = 256
     counter2 = 0
 
     fp = open(inputFile, "rb")
     fileContent = fp.read()
 
-    for fileChar in fileContent:
+    for counter, fileChar in enumerate(fileContent, start=256):
         unsignedFileChar = fileChar if sys.version_info >= (3, 0) else ord(fileChar)
 
         if unsignedFileChar != 0:
@@ -47,8 +46,6 @@ def convert(inputFile):
             scrString = ""
             counter2 = 0
 
-        counter += 1
-
         if counter2 == 20:
             script += "%s\n" % scrString
             scrString = ""
@@ -60,7 +57,7 @@ def convert(inputFile):
 
 def main(inputFile, outputFile):
     if not os.path.isfile(inputFile):
-        print("ERROR: the provided input file '%s' is not a regular file" % inputFile)
+        print(f"ERROR: the provided input file '{inputFile}' is not a regular file")
         sys.exit(1)
 
     script = convert(inputFile)
@@ -74,7 +71,7 @@ def main(inputFile, outputFile):
         print(script)
 
 if __name__ == "__main__":
-    usage = "%s -i <input file> [-o <output file>]" % sys.argv[0]
+    usage = f"{sys.argv[0]} -i <input file> [-o <output file>]"
     parser = OptionParser(usage=usage, version="0.1")
 
     try:

@@ -42,9 +42,8 @@ def runGui(parser):
         from thirdparty.six.moves import tkinter_ttk as _tkinter_ttk
         from thirdparty.six.moves import tkinter_messagebox as _tkinter_messagebox
     except ImportError as ex:
-        raise SqlmapMissingDependence("missing dependence ('%s')" % getSafeExString(ex))
+        raise SqlmapMissingDependence(f"missing dependence ('{getSafeExString(ex)}')")
 
-    # Reference: https://www.reddit.com/r/learnpython/comments/985umy/limit_user_input_to_only_int_with_tkinter/e4dj9k9?utm_source=share&utm_medium=web2x
     class ConstrainedEntry(_tkinter.Entry):
         def __init__(self, master=None, **kwargs):
             self.var = _tkinter.StringVar()
@@ -61,7 +60,6 @@ def runGui(parser):
             else:
                 self.set(self.old_value)
 
-    # Reference: https://code.activestate.com/recipes/580726-tkinter-notebook-that-fits-to-the-height-of-every-/
     class AutoresizableNotebook(_tkinter_ttk.Notebook):
         def __init__(self, master=None, **kw):
             _tkinter_ttk.Notebook.__init__(self, master, **kw)
@@ -76,7 +74,7 @@ def runGui(parser):
     try:
         window = _tkinter.Tk()
     except Exception as ex:
-        errMsg = "unable to create GUI window ('%s')" % getSafeExString(ex)
+        errMsg = f"unable to create GUI window ('{getSafeExString(ex)}')"
         raise SqlmapSystemException(errMsg)
 
     window.title(VERSION_STRING)
@@ -242,12 +240,17 @@ def runGui(parser):
 
         row = 1
         if group.get_description():
-            _tkinter.Label(frame, text="%s:" % group.get_description()).grid(column=0, row=1, columnspan=3, sticky=_tkinter.W)
+            _tkinter.Label(frame, text=f"{group.get_description()}:").grid(
+                column=0, row=1, columnspan=3, sticky=_tkinter.W
+            )
             _tkinter.Label(frame).grid(column=0, row=2, sticky=_tkinter.W)
             row += 2
 
         for option in group.option_list:
-            _tkinter.Label(frame, text="%s " % parser.formatter._format_option_strings(option)).grid(column=0, row=row, sticky=_tkinter.W)
+            _tkinter.Label(
+                frame,
+                text=f"{parser.formatter._format_option_strings(option)} ",
+            ).grid(column=0, row=row, sticky=_tkinter.W)
 
             if option.type == "string":
                 widget = _tkinter.Entry(frame)
@@ -270,7 +273,9 @@ def runGui(parser):
                 if hasattr(widget, "insert"):
                     widget.insert(0, default)
 
-            _tkinter.Label(frame, text=" %s" % option.help).grid(column=2, row=row, sticky=_tkinter.W)
+            _tkinter.Label(frame, text=f" {option.help}").grid(
+                column=2, row=row, sticky=_tkinter.W
+            )
 
             row += 1
 

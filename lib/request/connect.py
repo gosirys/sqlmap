@@ -180,10 +180,10 @@ class Connect(object):
             setHTTPHandlers()
 
         if kb.testMode and kb.previousMethod == PAYLOAD.METHOD.TIME:
-            # timed based payloads can cause web server unresponsiveness
-            # if the injectable piece of code is some kind of JOIN-like query
-            warnMsg = "most likely web server instance hasn't recovered yet "
-            warnMsg += "from previous timed based payload. If the problem "
+            warnMsg = (
+                "most likely web server instance hasn't recovered yet "
+                + "from previous timed based payload. If the problem "
+            )
             warnMsg += "persists please wait for a few minutes and rerun "
             warnMsg += "without flag 'T' in option '--technique' "
             warnMsg += "(e.g. '--flush-session --technique=BEUS') or try to "
@@ -192,8 +192,7 @@ class Connect(object):
 
         elif kb.originalPage is None:
             if conf.tor:
-                warnMsg = "please make sure that you have "
-                warnMsg += "Tor installed and running so "
+                warnMsg = "please make sure that you have " + "Tor installed and running so "
                 warnMsg += "you could successfully use "
                 warnMsg += "switch '--tor' "
                 if IS_WIN:
@@ -201,9 +200,10 @@ class Connect(object):
                 else:
                     warnMsg += "(e.g. 'https://help.ubuntu.com/community/Tor')"
             else:
-                warnMsg = "if the problem persists please check that the provided "
-                warnMsg += "target URL is reachable"
-
+                warnMsg = (
+                    "if the problem persists please check that the provided "
+                    + "target URL is reachable"
+                )
                 items = []
                 if not conf.randomAgent:
                     items.append("switch '--random-agent'")
@@ -217,8 +217,10 @@ class Connect(object):
             singleTimeWarnMessage(warnMsg)
 
         elif conf.threads > 1:
-            warnMsg = "if the problem persists please try to lower "
-            warnMsg += "the number of used threads (option '--threads')"
+            warnMsg = (
+                "if the problem persists please try to lower "
+                + "the number of used threads (option '--threads')"
+            )
             singleTimeWarnMessage(warnMsg)
 
         kwargs['retrying'] = True
@@ -241,16 +243,21 @@ class Connect(object):
                 while True:
                     if not conn:
                         break
-                    else:
-                        try:
-                            part = conn.read(MAX_CONNECTION_READ_SIZE)
-                        except AssertionError:
-                            part = b""
+                    try:
+                        part = conn.read(MAX_CONNECTION_READ_SIZE)
+                    except AssertionError:
+                        part = b""
 
                     if len(part) == MAX_CONNECTION_READ_SIZE:
                         warnMsg = "large response detected. This could take a while"
                         singleTimeWarnMessage(warnMsg)
-                        part = re.sub(getBytes(r"(?si)%s.+?%s" % (kb.chars.stop, kb.chars.start)), getBytes("%s%s%s" % (kb.chars.stop, LARGE_READ_TRIM_MARKER, kb.chars.start)), part)
+                        part = re.sub(
+                            getBytes(f"(?si){kb.chars.stop}.+?{kb.chars.start}"),
+                            getBytes(
+                                f"{kb.chars.stop}{LARGE_READ_TRIM_MARKER}{kb.chars.start}"
+                            ),
+                            part,
+                        )
                         retVal += part
                     else:
                         retVal += part
