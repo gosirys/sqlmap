@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -16,6 +16,7 @@ import codecs
 import json
 import re
 import sys
+import time
 
 from lib.core.bigarray import BigArray
 from lib.core.compat import xrange
@@ -133,6 +134,23 @@ def dejsonize(data):
     """
 
     return json.loads(data)
+
+def rot13(data):
+    """
+    Returns ROT13 encoded/decoded text
+
+    >>> rot13('foobar was here!!')
+    'sbbone jnf urer!!'
+    >>> rot13('sbbone jnf urer!!')
+    'foobar was here!!'
+    """
+
+    # Reference: https://stackoverflow.com/a/62662878
+    retVal = ""
+    alphabit = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    for char in data:
+        retVal += alphabit[alphabit.index(char) + 13] if char in alphabit else char
+    return retVal
 
 def decodeHex(value, binary=True):
     """
@@ -333,6 +351,10 @@ def getUnicode(value, encoding=None, noneToNull=False):
     >>> getUnicode(None) == 'None'
     True
     """
+
+    # Best position for --time-limit mechanism
+    if conf.get("timeLimit") and kb.get("startTime") and (time.time() - kb.startTime > conf.timeLimit):
+        raise SystemExit
 
     if noneToNull and value is None:
         return NULL

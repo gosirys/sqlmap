@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
 import copy
+import threading
 import types
 
 from thirdparty.odict import OrderedDict
@@ -43,6 +44,19 @@ class AttribDict(dict):
 
         try:
             return self.__getitem__(item)
+        except KeyError:
+            if self.keycheck:
+                raise AttributeError("unable to access item '%s'" % item)
+            else:
+                return None
+
+    def __delattr__(self, item):
+        """
+        Deletes attributes
+        """
+
+        try:
+            return self.pop(item)
         except KeyError:
             if self.keycheck:
                 raise AttributeError("unable to access item '%s'" % item)
@@ -129,6 +143,7 @@ class LRUDict(object):
     def __init__(self, capacity):
         self.capacity = capacity
         self.cache = OrderedDict()
+        self.__lock = threading.Lock()
 
     def __len__(self):
         return len(self.cache)
@@ -145,11 +160,12 @@ class LRUDict(object):
         return self.__getitem__(key)
 
     def __setitem__(self, key, value):
-        try:
-            self.cache.pop(key)
-        except KeyError:
-            if len(self.cache) >= self.capacity:
-                self.cache.popitem(last=False)
+        with self.__lock:
+            try:
+                self.cache.pop(key)
+            except KeyError:
+                if len(self.cache) >= self.capacity:
+                    self.cache.popitem(last=False)
         self.cache[key] = value
 
     def set(self, key, value):

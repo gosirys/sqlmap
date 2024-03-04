@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -106,6 +106,7 @@ class FORK(object):
     YELLOWBRICK = "Yellowbrick"
     IRIS = "Iris"
     YUGABYTEDB = "YugabyteDB"
+    OPENGAUSS = "OpenGauss"
 
 class CUSTOM_LOGGING(object):
     # YRESP = 0

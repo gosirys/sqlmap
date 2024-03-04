@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -181,8 +181,11 @@ class HashDB(object):
             try:
                 self.cursor.execute("BEGIN TRANSACTION")
             except:
-                # Reference: http://stackoverflow.com/a/25245731
-                self.cursor.close()
+                try:
+                    # Reference: http://stackoverflow.com/a/25245731
+                    self.cursor.close()
+                except sqlite3.ProgrammingError:
+                    pass
                 threadData.hashDBCursor = None
                 self.cursor.execute("BEGIN TRANSACTION")
             finally:

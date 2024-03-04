@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
 See the file 'doc/COPYING' for copying permission
 """
 
 from lib.core.compat import xrange
 from lib.core.enums import PRIORITY
+from lib.core.settings import REPLACEMENT_MARKER
 
 __priority__ = PRIORITY.HIGHEST
 
@@ -36,6 +37,7 @@ def tamper(payload, **kwargs):
     """
 
     if payload and payload.find("IF") > -1:
+        payload = payload.replace("()", REPLACEMENT_MARKER)
         while payload.find("IF(") > -1:
             index = payload.find("IF(")
             depth = 1
@@ -63,5 +65,7 @@ def tamper(payload, **kwargs):
                 payload = payload[:index] + newVal + payload[end + 1:]
             else:
                 break
+
+        payload = payload.replace(REPLACEMENT_MARKER, "()")
 
     return payload

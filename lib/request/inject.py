@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -274,7 +274,7 @@ def _goInferenceProxy(expression, fromUser=False, batch=False, unpack=True, char
 
                         stopLimit = 1
 
-                    elif (not count or int(count) == 0):
+                    elif not isNumPosStrValue(count):
                         if not count:
                             warnMsg = "the SQL query provided does not "
                             warnMsg += "return any output"

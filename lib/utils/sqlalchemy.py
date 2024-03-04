@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -115,6 +115,10 @@ class SQLAlchemy(GenericConnector):
 
     def execute(self, query):
         retVal = False
+
+        # Reference: https://stackoverflow.com/a/69491015
+        if hasattr(_sqlalchemy, "text"):
+            query = _sqlalchemy.text(query)
 
         try:
             self.cursor = self.connector.execute(query)
