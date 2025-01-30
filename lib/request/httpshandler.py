@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -80,7 +80,7 @@ class HTTPSConnection(_http_client.HTTPSConnection):
                             # Reference(s): https://askubuntu.com/a/1263098
                             #               https://askubuntu.com/a/1250807
                             _contexts[protocol].set_ciphers("DEFAULT@SECLEVEL=1")
-                        except ssl.SSLError:
+                        except (ssl.SSLError, AttributeError):
                             pass
                     result = _contexts[protocol].wrap_socket(sock, do_handshake_on_connect=True, server_hostname=self.host if re.search(r"\A[\d.]+\Z", self.host or "") is None else None)
                     if result:

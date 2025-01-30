@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -762,6 +762,9 @@ def cmdLineParser(argv=None):
 
         miscellaneous.add_argument("--disable-coloring", dest="disableColoring", action="store_true",
             help="Disable console output coloring")
+
+        miscellaneous.add_argument("--disable-hashing", dest="disableHashing", action="store_true",
+            help="Disable hash analysis on table dumps")
 
         miscellaneous.add_argument("--list-tampers", dest="listTampers", action="store_true",
             help="Display list of available tamper scripts")

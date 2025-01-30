@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -33,8 +33,8 @@ class Connector(GenericConnector):
 
     def connect(self):
         self.initConnection()
-        self.__dsn = cx_Oracle.makedsn(self.hostname, self.port, self.db)
-        self.__dsn = getText(self.__dsn)
+        # Reference: https://cx-oracle.readthedocs.io/en/latest/user_guide/connection_handling.html
+        self.__dsn = "%s:%d/%s" % (self.hostname, self.port, self.db)
         self.user = getText(self.user)
         self.password = getText(self.password)
 

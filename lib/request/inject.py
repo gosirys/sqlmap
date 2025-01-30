@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -204,7 +204,7 @@ def _goInferenceProxy(expression, fromUser=False, batch=False, unpack=True, char
         if limitCond:
             test = True
 
-            if not stopLimit or stopLimit <= 1:
+            if stopLimit is None or stopLimit <= 1:
                 if Backend.getIdentifiedDbms() in FROM_DUMMY_TABLE and expression.upper().endswith(FROM_DUMMY_TABLE[Backend.getIdentifiedDbms()]):
                     test = False
 

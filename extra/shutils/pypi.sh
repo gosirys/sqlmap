@@ -16,7 +16,7 @@ cat > $TMP_DIR/setup.py << EOF
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -38,7 +38,8 @@ setup(
     },
     download_url='https://github.com/sqlmapproject/sqlmap/archive/$VERSION.zip',
     license='GNU General Public License v2 (GPLv2)',
-    packages=find_packages(),
+    packages=['sqlmap'],
+    package_dir={'sqlmap':'sqlmap'},
     include_package_data=True,
     zip_safe=False,
     # https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -67,7 +68,7 @@ cat > sqlmap/__init__.py << EOF
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -176,5 +177,7 @@ EOF
 sed -i "s/^VERSION =.*/VERSION = \"$VERSION\"/g" sqlmap/lib/core/settings.py
 sed -i "s/^TYPE =.*/TYPE = \"$TYPE\"/g" sqlmap/lib/core/settings.py
 for file in $(find sqlmap -type f | grep -v -E "\.(git|yml)"); do echo include $file >> MANIFEST.in; done
-python setup.py sdist upload
+python setup.py sdist bdist_wheel
+twine check dist/*
+twine upload --config-file=~/.pypirc dist/*
 rm -rf $TMP_DIR

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -129,13 +129,14 @@ from lib.core.settings import FORM_SEARCH_REGEX
 from lib.core.settings import GENERIC_DOC_ROOT_DIRECTORY_NAMES
 from lib.core.settings import GIT_PAGE
 from lib.core.settings import GITHUB_REPORT_OAUTH_TOKEN
-from lib.core.settings import GOOGLE_ANALYTICS_COOKIE_PREFIX
+from lib.core.settings import GOOGLE_ANALYTICS_COOKIE_REGEX
 from lib.core.settings import HASHDB_MILESTONE_VALUE
 from lib.core.settings import HOST_ALIASES
 from lib.core.settings import HTTP_CHUNKED_SPLIT_KEYWORDS
 from lib.core.settings import IGNORE_PARAMETERS
 from lib.core.settings import IGNORE_SAVE_OPTIONS
 from lib.core.settings import INFERENCE_UNKNOWN_CHAR
+from lib.core.settings import INJECT_HERE_REGEX
 from lib.core.settings import IP_ADDRESS_REGEX
 from lib.core.settings import ISSUES_PAGE
 from lib.core.settings import IS_TTY
@@ -727,24 +728,12 @@ def paramToDict(place, parameters=None):
 
 				testableParameters[parameter] = value
 
-				if not conf.multipleTargets and not (
-					conf.csrfToken and re.search(conf.csrfToken, parameter, re.I)
-				):
+				if not conf.multipleTargets and not (conf.csrfToken and re.search(conf.csrfToken, parameter, re.I)):
 					_ = urldecode(testableParameters[parameter], convall=True)
-					if (
-						_.endswith("'")
-						and _.count("'") == 1
-						or re.search(r"\A9{3,}", _)
-						or re.search(r"\A-\d+\Z", _)
-						or re.search(DUMMY_USER_INJECTION, _)
-					) and not parameter.upper().startswith(
-						GOOGLE_ANALYTICS_COOKIE_PREFIX
-					):
+					if (_.endswith("'") and _.count("'") == 1 or re.search(r'\A9{3,}', _) or re.search(r'\A-\d+\Z', _) or re.search(DUMMY_USER_INJECTION, _)) and not re.search(GOOGLE_ANALYTICS_COOKIE_REGEX, parameter):
 						warnMsg = "it appears that you have provided tainted parameter values "
 						warnMsg += "('%s') with most likely leftover " % element
-						warnMsg += (
-							"chars/statements from manual SQL injection test(s). "
-						)
+						warnMsg += "chars/statements from manual SQL injection test(s). "
 						warnMsg += "Please, always use only valid parameter values "
 						warnMsg += "so sqlmap could be able to run properly"
 						logger.warning(warnMsg)
@@ -839,8 +828,16 @@ def paramToDict(place, parameters=None):
 												if value:
 													walk(head, value)
 
-								deserialized = json.loads(testableParameters[parameter])
-								walk(deserialized)
+								# NOTE: for cases with custom injection marker(s) inside (e.g. https://github.com/sqlmapproject/sqlmap/issues/4137#issuecomment-2013783111) - p.s. doesn't care too much about the structure (e.g. injection into the flat array values)
+								if CUSTOM_INJECTION_MARK_CHAR in testableParameters[parameter]:
+									for match in re.finditer(r'(\w+)[^\w]*"\s*:[^\w]*\w*%s' % re.escape(CUSTOM_INJECTION_MARK_CHAR), testableParameters[parameter]):
+										key = match.group(1)
+										value = testableParameters[parameter].replace(match.group(0), match.group(0).replace(CUSTOM_INJECTION_MARK_CHAR, BOUNDED_INJECTION_MARKER))
+										candidates["%s (%s)" % (parameter, key)] = re.sub(r"\b(%s\s*=\s*)%s" % (re.escape(parameter), re.escape(testableParameters[parameter])), r"\g<1>%s" % value, parameters)
+
+								if not candidates:
+									deserialized = json.loads(testableParameters[parameter])
+									walk(deserialized)
 
 								if candidates:
 									message = (
@@ -1617,7 +1614,10 @@ def isZipFile(filename):
 
 	checkFile(filename)
 
-	return openFile(filename, "rb", encoding=None).read(len(ZIP_HEADER)) == ZIP_HEADER
+	with openFile(filename, "rb", encoding=None) as f:
+		header = f.read(len(ZIP_HEADER))
+
+	return header == ZIP_HEADER
 
 
 def isDigit(value):
@@ -3029,21 +3029,22 @@ def initCommonOutputs():
 	kb.commonOutputs = {}
 	key = None
 
-	for line in openFile(paths.COMMON_OUTPUTS, "r"):
-		if line.find("#") != -1:
-			line = line[: line.find("#")]
+	with openFile(paths.COMMON_OUTPUTS, 'r') as f:
+		for line in f:
+			if line.find('#') != -1:
+				line = line[:line.find('#')]
 
-		line = line.strip()
+			line = line.strip()
 
-		if len(line) > 1:
-			if line.startswith("[") and line.endswith("]"):
-				key = line[1:-1]
-			elif key:
-				if key not in kb.commonOutputs:
-					kb.commonOutputs[key] = set()
+			if len(line) > 1:
+				if line.startswith('[') and line.endswith(']'):
+					key = line[1:-1]
+				elif key:
+					if key not in kb.commonOutputs:
+						kb.commonOutputs[key] = set()
 
-				if line not in kb.commonOutputs[key]:
-					kb.commonOutputs[key].add(line)
+					if line not in kb.commonOutputs[key]:
+						kb.commonOutputs[key].add(line)
 
 
 def getFileItems(
@@ -4405,10 +4406,12 @@ def joinValue(value, delimiter=","):
 	'1,2'
 	>>> joinValue('1')
 	'1'
+	>>> joinValue(['1', None])
+	'1,None'
 	"""
 
 	if isListLike(value):
-		retVal = delimiter.join(value)
+		retVal = delimiter.join(getText(_ if _ is not None else "None") for _ in value)
 	else:
 		retVal = value
 
@@ -5597,8 +5600,7 @@ def isAdminFromPrivileges(privileges):
 
 	return retVal
 
-
-def findPageForms(content, url, raise_=False, addToTargets=False):
+def findPageForms(content, url, raiseException=False, addToTargets=False):
 	"""
 	Parses given page content for possible forms (Note: still not implemented for Python3)
 
@@ -5616,7 +5618,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
 
 	if not content:
 		errMsg = "can't parse forms as the page content appears to be blank"
-		if raise_:
+		if raiseException:
 			raise SqlmapGenericException(errMsg)
 		else:
 			logger.debug(errMsg)
@@ -5642,7 +5644,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
 					forms = ParseResponse(filtered, backwards_compat=False)
 				except:
 					errMsg = "no success"
-					if raise_:
+					if raiseException:
 						raise SqlmapGenericException(errMsg)
 					else:
 						logger.debug(errMsg)
@@ -5671,7 +5673,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
 		except (ValueError, TypeError) as ex:
 			errMsg = "there has been a problem while "
 			errMsg += "processing page forms ('%s')" % getSafeExString(ex)
-			if raise_:
+			if raiseException:
 				raise SqlmapGenericException(errMsg)
 			else:
 				logger.debug(errMsg)
@@ -5730,7 +5732,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
 
 	if not retVal and not conf.crawlDepth:
 		errMsg = "there were no forms found at the given target URL"
-		if raise_:
+		if raiseException:
 			raise SqlmapGenericException(errMsg)
 		else:
 			logger.debug(errMsg)
@@ -6332,6 +6334,9 @@ def parseRequestFile(reqFile, checkParams=True):
 		Parses WebScarab logs (POST method not supported)
 		"""
 
+		if WEBSCARAB_SPLITTER not in content:
+			return
+
 		reqResList = content.split(WEBSCARAB_SPLITTER)
 
 		for request in reqResList:
@@ -6428,20 +6433,13 @@ def parseRequestFile(reqFile, checkParams=True):
 				if not line.strip() and index == len(lines) - 1:
 					break
 
-				newline = "\r\n" if line.endswith("\r") else "\n"
-				line = line.strip("\r")
-				match = (
-					re.search(r"\A([A-Z]+) (.+) HTTP/[\d.]+\Z", line)
-					if not method
-					else None
-				)
+				line = re.sub(INJECT_HERE_REGEX, CUSTOM_INJECTION_MARK_CHAR, line)
 
-				if (
-					len(line.strip()) == 0
-					and method
-					and (method != HTTPMETHOD.GET or forceBody)
-					and data is None
-				):
+				newline = "\r\n" if line.endswith('\r') else '\n'
+				line = line.strip('\r')
+				match = re.search(r"\A([A-Z]+) (.+) HTTP/[\d.]+\Z", line) if not method else None
+
+				if len(line.strip()) == 0 and method and (method != HTTPMETHOD.GET or forceBody) and data is None:
 					data = ""
 					params = True
 
@@ -6483,9 +6481,9 @@ def parseRequestFile(reqFile, checkParams=True):
 
 						port = extractRegexResult(r":(?P<result>\d+)\Z", value)
 						if port:
-							value = value[: -(1 + len(port))]
-
-						host = value
+							host = value[:-(1 + len(port))]
+						else:
+							host = value
 
 					# Avoid to add a static content length header to
 					# headers and consider the following lines as
@@ -6706,14 +6704,11 @@ def checkSums():
 			match = re.search(r"([0-9a-f]+)\s+([^\s]+)", entry)
 			if match:
 				expected, filename = match.groups()
-				filepath = os.path.join(paths.SQLMAP_ROOT_PATH, filename).replace(
-					"/", os.path.sep
-				)
+				filepath = os.path.join(paths.SQLMAP_ROOT_PATH, filename).replace('/', os.path.sep)
 				checkFile(filepath)
-				if (
-					not hashlib.sha256(open(filepath, "rb").read()).hexdigest()
-					== expected
-				):
+				with open(filepath, "rb") as f:
+					content = f.read()
+				if not hashlib.sha256(content).hexdigest() == expected:
 					retVal &= False
 					break
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -196,7 +196,7 @@ class Metasploit(object):
 
             if Backend.isDbms(DBMS.MYSQL):
                 debugMsg = "by default MySQL on Windows runs as SYSTEM "
-                debugMsg += "user, it is likely that the the VNC "
+                debugMsg += "user, it is likely that the VNC "
                 debugMsg += "injection will be successful"
                 logger.debug(debugMsg)
 

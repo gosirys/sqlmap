@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -437,7 +437,7 @@ def main():
             raise SystemExit
 
         elif any(_ in errMsg for _ in (": 9.9.9#",)):
-            errMsg = "LOL :)"
+            errMsg = "LOL xD"
             logger.critical(errMsg)
             raise SystemExit
 
