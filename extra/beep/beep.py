@@ -3,7 +3,7 @@
 """
 beep.py - Make a beep sound
 
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -18,7 +18,7 @@ def beep():
         if sys.platform.startswith("win"):
             _win_wav_play(BEEP_WAV_FILENAME)
         elif sys.platform.startswith("darwin"):
-            _mac_beep()
+            _mac_wav_play(BEEP_WAV_FILENAME)
         elif sys.platform.startswith("cygwin"):
             _cygwin_beep(BEEP_WAV_FILENAME)
         elif any(sys.platform.startswith(_) for _ in ("linux", "freebsd")):
@@ -40,9 +40,8 @@ def _speaker_beep():
 def _cygwin_beep(filename):
     os.system("play-sound-file '%s' 2>/dev/null" % filename)
 
-def _mac_beep():
-    import Carbon.Snd
-    Carbon.Snd.SysBeep(1)
+def _mac_wav_play(filename):
+    os.system("afplay '%s' 2>/dev/null" % BEEP_WAV_FILENAME)
 
 def _win_wav_play(filename):
     import winsound
@@ -50,7 +49,7 @@ def _win_wav_play(filename):
     winsound.PlaySound(filename, winsound.SND_FILENAME)
 
 def _linux_wav_play(filename):
-    for _ in ("aplay", "paplay", "play"):
+    for _ in ("paplay", "aplay", "mpv", "mplayer", "play"):
         if not os.system("%s '%s' 2>/dev/null" % (_, filename)):
             return
 

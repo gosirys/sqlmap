@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -34,7 +34,7 @@ class Connector(GenericConnector):
 
         try:
             self.connector = psycopg2.connect(host=self.hostname, user=self.user, password=self.password, database=self.db, port=self.port)
-        except psycopg2.OperationalError as ex:
+        except (psycopg2.OperationalError, UnicodeDecodeError) as ex:
             raise SqlmapConnectionException(getSafeExString(ex))
 
         self.connector.set_client_encoding('UNICODE')

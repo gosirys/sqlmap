@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -110,7 +110,7 @@ def update():
 
                         filepath = os.path.join(paths.SQLMAP_ROOT_PATH, "lib", "core", "settings.py")
                         if os.path.isfile(filepath):
-                            with openFile(filepath, "rb") as f:
+                            with openFile(filepath, "r") as f:
                                 version = re.search(r"(?m)^VERSION\s*=\s*['\"]([^'\"]+)", f.read()).group(1)
                                 logger.info("updated to the latest version '%s#dev'" % version)
                                 success = True

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -133,13 +133,15 @@ class Fingerprint(GenericFingerprint):
             infoMsg = "actively fingerprinting %s" % DBMS.PGSQL
             logger.info(infoMsg)
 
-            if inject.checkBooleanExpression("RANDOM_NORMAL(0.0, 1.0) IS NOT NULL"):
+            if inject.checkBooleanExpression("JSON_QUERY(NULL::jsonb, '$') IS NULL"):
+                Backend.setVersion(">= 17.0")
+            elif inject.checkBooleanExpression("RANDOM_NORMAL(0.0, 1.0) IS NOT NULL"):
                 Backend.setVersion(">= 16.0")
             elif inject.checkBooleanExpression("REGEXP_COUNT(NULL,NULL) IS NULL"):
                 Backend.setVersion(">= 15.0")
             elif inject.checkBooleanExpression("BIT_COUNT(NULL) IS NULL"):
                 Backend.setVersion(">= 14.0")
-            elif inject.checkBooleanExpression("GEN_RANDOM_UUID() IS NOT NULL"):
+            elif inject.checkBooleanExpression("NULL::anycompatible IS NULL"):
                 Backend.setVersion(">= 13.0")
             elif inject.checkBooleanExpression("SINH(0)=0"):
                 Backend.setVersion(">= 12.0")

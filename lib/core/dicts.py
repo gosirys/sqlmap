@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -225,7 +225,7 @@ DBMS_DICT = {
     DBMS.MSSQL: (MSSQL_ALIASES, "python-pymssql", "https://github.com/pymssql/pymssql", "mssql+pymssql"),
     DBMS.MYSQL: (MYSQL_ALIASES, "python-pymysql", "https://github.com/PyMySQL/PyMySQL", "mysql"),
     DBMS.PGSQL: (PGSQL_ALIASES, "python-psycopg2", "https://github.com/psycopg/psycopg2", "postgresql"),
-    DBMS.ORACLE: (ORACLE_ALIASES, "python cx_Oracle", "https://oracle.github.io/python-cx_Oracle/", "oracle"),
+    DBMS.ORACLE: (ORACLE_ALIASES, "python-oracledb", "https://oracle.github.io/python-oracledb/", "oracle"),
     DBMS.SQLITE: (SQLITE_ALIASES, "python-sqlite", "https://docs.python.org/3/library/sqlite3.html", "sqlite"),
     DBMS.ACCESS: (ACCESS_ALIASES, "python-pyodbc", "https://github.com/mkleehammer/pyodbc", "access"),
     DBMS.FIREBIRD: (FIREBIRD_ALIASES, "python-kinterbasdb", "http://kinterbasdb.sourceforge.net/", "firebird"),
@@ -269,7 +269,7 @@ FROM_DUMMY_TABLE = {
 HEURISTIC_NULL_EVAL = {
     DBMS.ACCESS: "CVAR(NULL)",
     DBMS.MAXDB: "ALPHA(NULL)",
-    DBMS.MSSQL: "DIFFERENCE(NULL,NULL)",
+    DBMS.MSSQL: "IIF(1=1,DIFFERENCE(NULL,NULL),0)",
     DBMS.MYSQL: "QUARTER(NULL XOR NULL)",
     DBMS.ORACLE: "INSTR2(NULL,NULL)",
     DBMS.PGSQL: "QUOTE_IDENT(NULL)",

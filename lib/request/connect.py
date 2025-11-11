@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -65,6 +65,7 @@ from lib.core.common import unsafeVariableNaming
 from lib.core.common import urldecode
 from lib.core.common import urlencode
 from lib.core.common import wasLastResponseDelayed
+from lib.core.compat import LooseVersion
 from lib.core.compat import patchHeaders
 from lib.core.compat import xrange
 from lib.core.convert import encodeBase64
@@ -93,6 +94,7 @@ from lib.core.enums import WEB_PLATFORM
 from lib.core.exception import SqlmapCompressionException
 from lib.core.exception import SqlmapConnectionException
 from lib.core.exception import SqlmapGenericException
+from lib.core.exception import SqlmapMissingDependence
 from lib.core.exception import SqlmapSkipTargetException
 from lib.core.exception import SqlmapSyntaxException
 from lib.core.exception import SqlmapTokenException
@@ -111,6 +113,7 @@ from lib.core.settings import IS_WIN
 from lib.core.settings import JAVASCRIPT_HREF_REGEX
 from lib.core.settings import LARGE_READ_TRIM_MARKER
 from lib.core.settings import LIVE_COOKIES_TIMEOUT
+from lib.core.settings import MIN_HTTPX_VERSION
 from lib.core.settings import MAX_CONNECTION_READ_SIZE
 from lib.core.settings import MAX_CONNECTIONS_REGEX
 from lib.core.settings import MAX_CONNECTION_TOTAL_SIZE
@@ -607,11 +610,6 @@ class Connect(object):
                 if not chunked:
                     requestMsg += "\r\n"
 
-                if not multipart:
-                    threadData.lastRequestMsg = requestMsg
-
-                    logger.log(CUSTOM_LOGGING.TRAFFIC_OUT, requestMsg)
-
                 if conf.cj:
                     for cookie in conf.cj:
                         if cookie.value is None:
@@ -620,7 +618,54 @@ class Connect(object):
                             for char in (r"\r", r"\n"):
                                 cookie.value = re.sub(r"(%s)([^ \t])" % char, r"\g<1>\t\g<2>", cookie.value)
 
-                conn = _urllib.request.urlopen(req)
+                if conf.http2:
+                    try:
+                        import httpx
+                    except ImportError:
+                        raise SqlmapMissingDependence("httpx[http2] not available (e.g. 'pip%s install httpx[http2]')" % ('3' if six.PY3 else ""))
+
+                    if LooseVersion(httpx.__version__) < LooseVersion(MIN_HTTPX_VERSION):
+                        raise SqlmapMissingDependence("outdated version of httpx detected (%s<%s)" % (httpx.__version__, MIN_HTTPX_VERSION))
+
+                    try:
+                        proxy_mounts = dict(("%s://" % key, httpx.HTTPTransport(proxy="%s%s" % ("http://" if "://" not in kb.proxies[key] else "", kb.proxies[key]))) for key in kb.proxies) if kb.proxies else None
+                        with httpx.Client(verify=False, http2=True, timeout=timeout, follow_redirects=True, cookies=conf.cj, mounts=proxy_mounts) as client:
+                            conn = client.request(method or (HTTPMETHOD.POST if post is not None else HTTPMETHOD.GET), url, headers=headers, data=post)
+                    except (httpx.HTTPError, httpx.InvalidURL, httpx.CookieConflict, httpx.StreamError) as ex:
+                        raise _http_client.HTTPException(getSafeExString(ex))
+                    else:
+                        conn.code = conn.status_code
+                        conn.msg = conn.reason_phrase
+                        conn.info = lambda c=conn: c.headers
+
+                        conn._read_buffer = conn.read()
+                        conn._read_offset = 0
+
+                        requestMsg = re.sub(" HTTP/[0-9.]+\r\n", " %s\r\n" % conn.http_version, requestMsg, count=1)
+
+                        if not multipart:
+                            threadData.lastRequestMsg = requestMsg
+
+                            logger.log(CUSTOM_LOGGING.TRAFFIC_OUT, requestMsg)
+
+                        def _read(count=None):
+                            offset = conn._read_offset
+                            if count is None:
+                                result = conn._read_buffer[offset:]
+                                conn._read_offset = len(conn._read_buffer)
+                            else:
+                                result = conn._read_buffer[offset: offset + count]
+                                conn._read_offset += len(result)
+                            return result
+
+                        conn.read = _read
+                else:
+                    if not multipart:
+                        threadData.lastRequestMsg = requestMsg
+
+                        logger.log(CUSTOM_LOGGING.TRAFFIC_OUT, requestMsg)
+
+                    conn = _urllib.request.urlopen(req)
 
                 if not kb.authHeader and getRequestHeader(req, HTTP_HEADER.AUTHORIZATION) and (conf.authType or "").lower() == AUTH_TYPE.BASIC.lower():
                     kb.authHeader = getUnicode(getRequestHeader(req, HTTP_HEADER.AUTHORIZATION))
@@ -703,7 +748,7 @@ class Connect(object):
             # Explicit closing of connection object
             if conn and not conf.keepAlive:
                 try:
-                    if hasattr(conn.fp, '_sock'):
+                    if hasattr(conn, "fp") and hasattr(conn.fp, '_sock'):
                         conn.fp._sock.close()
                     conn.close()
                 except Exception as ex:
@@ -1239,7 +1284,7 @@ class Connect(object):
                     warnMsg += ". sqlmap is going to retry the request"
                     logger.warning(warnMsg)
 
-                page, headers, code = Connect.getPage(url=conf.csrfUrl or conf.url, data=conf.csrfData or (conf.data if conf.csrfUrl == conf.url else None), method=conf.csrfMethod or (conf.method if conf.csrfUrl == conf.url else None), cookie=conf.parameters.get(PLACE.COOKIE), direct=True, silent=True, ua=conf.parameters.get(PLACE.USER_AGENT), referer=conf.parameters.get(PLACE.REFERER), host=conf.parameters.get(PLACE.HOST))
+                page, headers, code = Connect.getPage(url=conf.csrfUrl or conf.url, post=conf.csrfData or (conf.data if conf.csrfUrl == conf.url and (conf.csrfMethod or "").upper() == HTTPMETHOD.POST else None), method=conf.csrfMethod or (conf.method if conf.csrfUrl == conf.url else None), cookie=conf.parameters.get(PLACE.COOKIE), direct=True, silent=True, ua=conf.parameters.get(PLACE.USER_AGENT), referer=conf.parameters.get(PLACE.REFERER), host=conf.parameters.get(PLACE.HOST))
                 page = urldecode(page)  # for anti-CSRF tokens with special characters in their name (e.g. 'foo:bar=...')
 
                 match = re.search(r"(?i)<input[^>]+\bname=[\"']?(?P<name>%s)\b[^>]*\bvalue=[\"']?(?P<value>[^>'\"]*)" % conf.csrfToken, page or "", re.I)

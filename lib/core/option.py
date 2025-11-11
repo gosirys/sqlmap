@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -11,6 +11,7 @@ import codecs
 import functools
 import glob
 import inspect
+import json
 import logging
 import os
 import random
@@ -938,8 +939,8 @@ def _setPreprocessFunctions():
                     handle, filename = tempfile.mkstemp(prefix=MKSTEMP_PREFIX.PREPROCESS, suffix=".py")
                     os.close(handle)
 
-                    openFile(filename, "w+b").write("#!/usr/bin/env\n\ndef preprocess(req):\n    pass\n")
-                    openFile(os.path.join(os.path.dirname(filename), "__init__.py"), "w+b").write("pass")
+                    openFile(filename, "w+").write("#!/usr/bin/env\n\ndef preprocess(req):\n    pass\n")
+                    openFile(os.path.join(os.path.dirname(filename), "__init__.py"), "w+").write("pass")
 
                     errMsg = "function 'preprocess(req)' "
                     errMsg += "in preprocess script '%s' " % script
@@ -1128,13 +1129,17 @@ def _setHTTPHandlers():
                 errMsg = "invalid proxy address '%s' ('%s')" % (conf.proxy, getSafeExString(ex))
                 raise SqlmapSyntaxException(errMsg)
 
-            hostnamePort = _.netloc.rsplit(":", 1)
+            match = re.search(r"\A([^:]*):([^:]*)@([^@]+)\Z", _.netloc)
+            if match:
+                username, password = match.group(1), match.group(2)
+            else:
+                username, password = None, None
+
+            hostnamePort = _.netloc.rsplit('@', 1)[-1].rsplit(":", 1)
 
             scheme = _.scheme.upper()
             hostname = hostnamePort[0]
             port = None
-            username = None
-            password = None
 
             if len(hostnamePort) == 2:
                 try:
@@ -1175,7 +1180,7 @@ def _setHTTPHandlers():
                     proxyString = ""
 
                 proxyString += "%s:%d" % (hostname, port)
-                proxyHandler.proxies = {"http": proxyString, "https": proxyString}
+                proxyHandler.proxies = kb.proxies = {"http": proxyString, "https": proxyString}
 
             proxyHandler.__init__(proxyHandler.proxies)
 
@@ -1405,7 +1410,10 @@ def _setHTTPExtraHeaders():
         debugMsg = "setting extra HTTP headers"
         logger.debug(debugMsg)
 
-        conf.headers = conf.headers.split("\n") if "\n" in conf.headers else conf.headers.split("\\n")
+        if "\\n" in conf.headers:
+            conf.headers = conf.headers.replace("\\r\\n", "\\n").split("\\n")
+        else:
+            conf.headers = conf.headers.replace("\r\n", "\n").split("\n")
 
         for headerValue in conf.headers:
             if not headerValue.strip():
@@ -1652,6 +1660,8 @@ def _createTemporaryDirectory():
             errMsg = "there has been a problem while setting "
             errMsg += "temporary directory location ('%s')" % getSafeExString(ex)
             raise SqlmapSystemException(errMsg)
+
+    conf.tempDirs.append(tempfile.tempdir)
 
     if six.PY3:
         _pympTempLeakPatch(kb.tempDir)
@@ -1978,6 +1988,8 @@ def _setConfAttributes():
     conf.dbmsHandler = None
     conf.dnsServer = None
     conf.dumpPath = None
+    conf.fileWriteType = None
+    conf.HARCollectorFactory = None
     conf.hashDB = None
     conf.hashDBFile = None
     conf.httpCollector = None
@@ -1994,9 +2006,8 @@ def _setConfAttributes():
     conf.resultsFP = None
     conf.scheme = None
     conf.tests = []
+    conf.tempDirs = []
     conf.trafficFP = None
-    conf.HARCollectorFactory = None
-    conf.fileWriteType = None
 
 def _setKnowledgeBaseAttributes(flushAll=True):
     """
@@ -2151,6 +2162,7 @@ def _setKnowledgeBaseAttributes(flushAll=True):
     kb.previousMethod = None
     kb.processNonCustom = None
     kb.processUserMarks = None
+    kb.proxies = None
     kb.proxyAuthHeader = None
     kb.queryCounter = 0
     kb.randomPool = {}
@@ -2512,7 +2524,7 @@ def _setTorSocksProxySettings():
     socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5 if conf.torType == PROXY_TYPE.SOCKS5 else socks.PROXY_TYPE_SOCKS4, LOCALHOST, port)
     socks.wrapmodule(_http_client)
 
-def _setHttpChunked():
+def _setHttpOptions():
     if conf.chunked and conf.data:
         if hasattr(_http_client.HTTPConnection, "_set_content_length"):
             _http_client.HTTPConnection._set_content_length = lambda self, *args, **kwargs: None
@@ -2526,7 +2538,10 @@ def _setHttpChunked():
 
             _http_client.HTTPConnection.putheader = putheader
 
-def _checkWebSocket():
+    if conf.http10:
+        _http_client.HTTPConnection._http_vsn = 10
+        _http_client.HTTPConnection._http_vsn_str = 'HTTP/1.0'
+
     if conf.url and (conf.url.startswith("ws:/") or conf.url.startswith("wss:/")):
         try:
             from websocket import ABNF
@@ -2543,11 +2558,12 @@ def _checkTor():
     logger.info(infoMsg)
 
     try:
-        page, _, _ = Request.getPage(url="https://check.torproject.org/", raise404=False)
-    except SqlmapConnectionException:
-        page = None
+        page, _, _ = Request.getPage(url="https://check.torproject.org/api/ip", raise404=False)
+        tor_status = json.loads(page)
+    except (SqlmapConnectionException, TypeError, ValueError):
+        tor_status = None
 
-    if not page or "Congratulations" not in page:
+    if not tor_status or not tor_status.get("IsTor"):
         errMsg = "it appears that Tor is not properly set. Please try using options '--tor-type' and/or '--tor-port'"
         raise SqlmapConnectionException(errMsg)
     else:
@@ -2700,7 +2716,6 @@ def _basicOptionValidation():
             warnMsg += "option '--retries' to %d because " % conf.retries
             warnMsg += "option '--retry-on' was provided"
             logger.warning(warnMsg)
-
 
     if conf.cookieDel and len(conf.cookieDel) != 1:
         errMsg = "option '--cookie-del' should contain a single character (e.g. ';')"
@@ -2913,8 +2928,7 @@ def init():
     _setPostprocessFunctions()
     _setTrafficOutputFP()
     _setupHTTPCollector()
-    _setHttpChunked()
-    _checkWebSocket()
+    _setHttpOptions()
 
     parseTargetDirect()
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -143,6 +143,8 @@ class Abstraction(Web, UDF, XP_cmdshell):
             try:
                 command = _input("os-shell> ")
                 command = getUnicode(command, encoding=sys.stdin.encoding)
+            except UnicodeDecodeError:
+                pass
             except KeyboardInterrupt:
                 print()
                 errMsg = "user aborted"

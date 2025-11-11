@@ -15,7 +15,6 @@
         <error regexp="Zend_Db_(Adapter|Statement)_Mysqli_Exception"/>
         <error regexp="Pdo[./_\\]Mysql"/>
         <error regexp="MySqlException"/>
-        <error regexp="SQLSTATE\[\d+\]: Syntax error or access violation"/>
         <error regexp="MemSQL does not support this type of query" fork="MemSQL"/>
         <error regexp="is not supported by MemSQL" fork="MemSQL"/>
         <error regexp="unsupported nested scalar subselect" fork="MemSQL"/>
@@ -28,7 +27,7 @@
         <error regexp="Npgsql\."/>
         <error regexp="PG::SyntaxError:"/>
         <error regexp="org\.postgresql\.util\.PSQLException"/>
-        <error regexp="ERROR:\s\ssyntax error at or near"/>
+        <error regexp="ERROR:\s+syntax error at or near"/>
         <error regexp="ERROR: parser: parse error at or near"/>
         <error regexp="PostgreSQL query failed"/>
         <error regexp="org\.postgresql\.jdbc"/>
@@ -105,7 +104,7 @@
 
     <!-- Interbase/Firebird -->
     <dbms value="Firebird">
-        <error regexp="Dynamic SQL Error"/>
+        <error regexp="Dynamic SQL Error.{1,10}SQL error code"/>
         <error regexp="Warning.*?\Wibase_"/>
         <error regexp="org\.firebirdsql\.jdbc"/>
         <error regexp="Pdo[./_\\]Firebird"/>
@@ -123,6 +122,7 @@
         <error regexp="org\.sqlite\.JDBC"/>
         <error regexp="Pdo[./_\\]Sqlite"/>
         <error regexp="SQLiteException"/>
+        <error regexp="SqliteError:"/>
     </dbms>
 
     <dbms value="SAP MaxDB">
@@ -130,7 +130,7 @@
         <error regexp="Warning.*?\Wmaxdb_"/>
         <error regexp="DriverSapDB"/>
         <error regexp="-3014.*?Invalid end of SQL statement"/>
-        <error regexp="com\.sap\.dbtech\.jdbc"/>
+        <error regexp="com\.sap\.db(tech)?\.jdbc"/>
         <error regexp="\[-3008\].*?: Invalid keyword or missing delimiter"/>
     </dbms>
 
@@ -165,7 +165,7 @@
 
     <dbms value="H2">
         <error regexp="org\.h2\.jdbc"/>
-        <error regexp="\[42000-192\]"/>
+        <error regexp="\[42000-\d+\]"/>
     </dbms>
 
     <dbms value="MonetDB">
@@ -212,7 +212,7 @@
     </dbms>
 
     <dbms value="ClickHouse">
-        <error regexp="Code: \d+. DB::Exception:"/>
+        <error regexp="Code: \d+[., ]+DB::Exception:"/>
         <error regexp="Syntax error: failed at position \d+"/>
     </dbms>
 

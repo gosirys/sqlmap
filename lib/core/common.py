@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -35,6 +35,7 @@ import threading
 import time
 import types
 import unicodedata
+import zlib
 
 from difflib import SequenceMatcher
 from math import sqrt
@@ -2006,45 +2007,30 @@ def parseTargetDirect():
 						errMsg += "Download from '%s'" % data[2]
 						raise SqlmapMissingDependence(errMsg)
 
-				elif dbmsName == DBMS.MYSQL:
-					__import__("pymysql")
-				elif dbmsName == DBMS.PGSQL:
-					__import__("psycopg2")
-				elif dbmsName == DBMS.ORACLE:
-					__import__("cx_Oracle")
-
-					# Reference: http://itsiti.com/ora-28009-connection-sys-sysdba-sysoper
-					if (conf.dbmsUser or "").upper() == "SYS":
-						conf.direct = "%s?mode=SYSDBA" % conf.direct
-				elif dbmsName == DBMS.SQLITE:
-					__import__("sqlite3")
-				elif dbmsName == DBMS.ACCESS:
-					__import__("pyodbc")
-				elif dbmsName == DBMS.FIREBIRD:
-					__import__("kinterbasdb")
-			except (SqlmapSyntaxException, SqlmapMissingDependence):
-				raise
-			except:
-				if (
-					_sqlalchemy
-					and data[3]
-					and any(
-						_ in _sqlalchemy.dialects.__all__
-						for _ in (data[3], data[3].split("+")[0])
-					)
-				):
-					pass
-				else:
-					errMsg = "sqlmap requires '%s' third-party library " % data[1]
-					errMsg += "in order to directly connect to the DBMS "
-					errMsg += "'%s'. You can download it from '%s'" % (
-						dbmsName,
-						data[2],
-					)
-					errMsg += ". Alternative is to use a package 'python-sqlalchemy' "
-					errMsg += "with support for dialect '%s' installed" % data[3]
-					raise SqlmapMissingDependence(errMsg)
-
+                elif dbmsName == DBMS.MYSQL:
+                    __import__("pymysql")
+                elif dbmsName == DBMS.PGSQL:
+                    __import__("psycopg2")
+                elif dbmsName == DBMS.ORACLE:
+                    __import__("oracledb")
+                elif dbmsName == DBMS.SQLITE:
+                    __import__("sqlite3")
+                elif dbmsName == DBMS.ACCESS:
+                    __import__("pyodbc")
+                elif dbmsName == DBMS.FIREBIRD:
+                    __import__("kinterbasdb")
+            except (SqlmapSyntaxException, SqlmapMissingDependence):
+                raise
+            except:
+                if _sqlalchemy and data[3] and any(_ in _sqlalchemy.dialects.__all__ for _ in (data[3], data[3].split('+')[0])):
+                    pass
+                else:
+                    errMsg = "sqlmap requires '%s' third-party library " % data[1]
+                    errMsg += "in order to directly connect to the DBMS "
+                    errMsg += "'%s'. You can download it from '%s'" % (dbmsName, data[2])
+                    errMsg += ". Alternative is to use a package 'python-sqlalchemy' "
+                    errMsg += "with support for dialect '%s' installed" % data[3]
+                    raise SqlmapMissingDependence(errMsg)
 
 def parseTargetUrl():
 	"""
@@ -2639,38 +2625,24 @@ def safeStringFormat(format_, params):
 						break
 				format_ = " ".join(parts)
 
-			count = 0
-			while True:
-				match = re.search(r"(\A|[^A-Za-z0-9])(%s)([^A-Za-z0-9]|\Z)", retVal)
-				if match:
-					if count >= len(params):
-						warnMsg = (
-							"wrong number of parameters during string formatting. "
-						)
-						warnMsg += (
-							"Please report by e-mail content \"%r | %r | %r\" to '%s'"
-							% (format_, params, retVal, DEV_EMAIL_ADDRESS)
-						)
-						raise SqlmapValueException(warnMsg)
-					else:
-						try:
-							retVal = re.sub(
-								r"(\A|[^A-Za-z0-9])(%s)([^A-Za-z0-9]|\Z)",
-								r"\g<1>%s\g<3>" % params[count],
-								retVal,
-								1,
-							)
-						except re.error:
-							retVal = retVal.replace(
-								match.group(0), match.group(0) % params[count], 1
-							)
-						count += 1
-				else:
-					break
+            count = 0
+            while True:
+                match = re.search(r"(\A|[^A-Za-z0-9])(%s)([^A-Za-z0-9]|\Z)", retVal)
+                if match:
+                    try:
+                        retVal = re.sub(r"(\A|[^A-Za-z0-9])(%s)([^A-Za-z0-9]|\Z)", r"\g<1>%s\g<3>" % params[count % len(params)], retVal, 1)
+                    except re.error:
+                        retVal = retVal.replace(match.group(0), match.group(0) % params[count % len(params)], 1)
+                    count += 1
+                else:
+                    break
 
-	retVal = getText(retVal).replace(PARAMETER_PERCENTAGE_MARKER, "%")
+            if count > len(params) and count % len(params):
+                warnMsg = "wrong number of parameters during string formatting. "
+                warnMsg += "Please report by e-mail content \"%r | %r | %r\" to '%s'" % (format_, params, retVal, DEV_EMAIL_ADDRESS)
+                raise SqlmapValueException(warnMsg)
 
-	return retVal
+    retVal = getText(retVal).replace(PARAMETER_PERCENTAGE_MARKER, '%')
 
 
 def getFilteredPageContent(page, onlyText=True, split=" "):
@@ -4759,19 +4731,9 @@ def createGithubIssue(errMsg, excMsg):
 		except:
 			pass
 
-		data = {
-			"title": "Unhandled exception (#%s)" % key,
-			"body": "```%s\n```\n```\n%s```" % (errMsg, excMsg),
-		}
-		req = _urllib.request.Request(
-			url="https://api.github.com/repos/sqlmapproject/sqlmap/issues",
-			data=getBytes(json.dumps(data)),
-			headers={
-				HTTP_HEADER.AUTHORIZATION: "token %s"
-				% decodeBase64(GITHUB_REPORT_OAUTH_TOKEN, binary=False),
-				HTTP_HEADER.USER_AGENT: fetchRandomAgent(),
-			},
-		)
+        data = {"title": "Unhandled exception (#%s)" % key, "body": "```%s\n```\n```\n%s```" % (errMsg, excMsg)}
+        token = getText(zlib.decompress(decodeBase64(GITHUB_REPORT_OAUTH_TOKEN[::-1], binary=True))[0::2][::-1])
+        req = _urllib.request.Request(url="https://api.github.com/repos/sqlmapproject/sqlmap/issues", data=getBytes(json.dumps(data)), headers={HTTP_HEADER.AUTHORIZATION: "token %s" % token, HTTP_HEADER.USER_AGENT: fetchRandomAgent()})
 
 		try:
 			content = getText(_urllib.request.urlopen(req).read())
@@ -6355,8 +6317,8 @@ def parseRequestFile(reqFile, checkParams=True):
 				logger.warning(warnMsg)
 				continue
 
-			if not (conf.scope and not re.search(conf.scope, url, re.I)):
-				yield (url, method, None, cookie, tuple())
+            if not (conf.scope and not re.search(conf.scope, url, re.I)):
+                yield (url, method, None, cookie, tuple())
 
 	def _parseBurpLog(content):
 		"""
@@ -6527,8 +6489,8 @@ def parseRequestFile(reqFile, checkParams=True):
 					scheme = None
 					port = None
 
-				if not (conf.scope and not re.search(conf.scope, url, re.I)):
-					yield (url, conf.method or method, data, cookie, tuple(headers))
+                if not (conf.scope and not re.search(conf.scope, url, re.I)):
+                    yield (url, conf.method or method, data, cookie, tuple(headers))
 
 	content = readCachedFileContent(reqFile)
 
@@ -6699,17 +6661,18 @@ def checkSums():
 
 	retVal = True
 
-	if paths.get("DIGEST_FILE"):
-		for entry in getFileItems(paths.DIGEST_FILE):
-			match = re.search(r"([0-9a-f]+)\s+([^\s]+)", entry)
-			if match:
-				expected, filename = match.groups()
-				filepath = os.path.join(paths.SQLMAP_ROOT_PATH, filename).replace('/', os.path.sep)
-				checkFile(filepath)
-				with open(filepath, "rb") as f:
-					content = f.read()
-				if not hashlib.sha256(content).hexdigest() == expected:
-					retVal &= False
-					break
+    if paths.get("DIGEST_FILE"):
+        for entry in getFileItems(paths.DIGEST_FILE):
+            match = re.search(r"([0-9a-f]+)\s+([^\s]+)", entry)
+            if match:
+                expected, filename = match.groups()
+                filepath = os.path.join(paths.SQLMAP_ROOT_PATH, filename).replace('/', os.path.sep)
+                if not checkFile(filepath, False):
+                    continue
+                with open(filepath, "rb") as f:
+                    content = f.read()
+                if not hashlib.sha256(content).hexdigest() == expected:
+                    retVal &= False
+                    break
 
 	return retVal

@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
 from lib.core.common import Backend
+from lib.core.common import getSafeExString
+from lib.core.common import singleTimeWarnMessage
 from lib.core.data import conf
 from lib.core.data import kb
 from lib.core.dicts import DBMS_DICT
@@ -171,16 +173,17 @@ def setHandler():
             if not dialect or exception:
                 try:
                     conf.dbmsConnector.connect()
-                except Exception as ex:
+                except NameError:
                     if exception:
                         raise exception
                     else:
-                        if not isinstance(ex, NameError):
-                            raise
-                        else:
-                            msg = "support for direct connection to '%s' is not available. " % dbms
-                            msg += "Please rerun with '--dependencies'"
-                            raise SqlmapConnectionException(msg)
+                        msg = "support for direct connection to '%s' is not available. " % dbms
+                        msg += "Please rerun with '--dependencies'"
+                        raise SqlmapConnectionException(msg)
+                except:
+                    if exception:
+                        singleTimeWarnMessage(getSafeExString(exception))
+                    raise
 
         if conf.forceDbms == dbms or handler.checkDbms():
             if kb.resolutionDbms:
