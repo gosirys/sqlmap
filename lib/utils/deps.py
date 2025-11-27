@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -32,7 +32,7 @@ def checkDependencies():
             elif dbmsName in (DBMS.PGSQL, DBMS.CRATEDB):
                 __import__("psycopg2")
             elif dbmsName == DBMS.ORACLE:
-                __import__("cx_Oracle")
+                __import__("oracledb")
             elif dbmsName == DBMS.SQLITE:
                 __import__("sqlite3")
             elif dbmsName == DBMS.ACCESS:
@@ -59,7 +59,7 @@ def checkDependencies():
             elif dbmsName == DBMS.CUBRID:
                 __import__("CUBRIDdb")
             elif dbmsName == DBMS.CLICKHOUSE:
-                __import__("clickhouse_connect")       
+                __import__("clickhouse_connect")
         except:
             warnMsg = "sqlmap requires '%s' third-party library " % data[1]
             warnMsg += "in order to directly connect to the DBMS "
@@ -93,6 +93,16 @@ def checkDependencies():
         warnMsg += "authentication. Download from 'https://github.com/mullender/python-ntlm'"
         logger.warning(warnMsg)
         missing_libraries.add('python-ntlm')
+
+    try:
+        __import__("httpx")
+        debugMsg = "'httpx[http2]' third-party library is found"
+        logger.debug(debugMsg)
+    except ImportError:
+        warnMsg = "sqlmap requires 'httpx[http2]' third-party library "
+        warnMsg += "if you plan to use HTTP version 2"
+        logger.warning(warnMsg)
+        missing_libraries.add('httpx[http2]')
 
     try:
         __import__("websocket._abnf")

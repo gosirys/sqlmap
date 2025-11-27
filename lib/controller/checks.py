@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -73,7 +73,7 @@ from lib.core.exception import SqlmapUserQuitException
 from lib.core.settings import BOUNDED_INJECTION_MARKER
 from lib.core.settings import CANDIDATE_SENTENCE_MIN_LENGTH
 from lib.core.settings import CHECK_INTERNET_ADDRESS
-from lib.core.settings import CHECK_INTERNET_VALUE
+from lib.core.settings import CHECK_INTERNET_CODE
 from lib.core.settings import DEFAULT_COOKIE_DELIMITER
 from lib.core.settings import DEFAULT_GET_POST_DELIMITER
 from lib.core.settings import DUMMY_NON_SQLI_CHECK_APPENDIX
@@ -277,7 +277,7 @@ def checkSqlInjection(place, parameter, value):
                     logger.debug(debugMsg)
                     continue
 
-                elif kb.reduceTests == False:
+                elif kb.reduceTests is False:
                     pass
 
                 # Skip DBMS-specific test if it does not match the
@@ -521,7 +521,7 @@ def checkSqlInjection(place, parameter, value):
 
                                     if ratio == 1.0:
                                         continue
-                                except (MemoryError, OverflowError):
+                                except:
                                     pass
 
                             # Perform the test's True request
@@ -529,7 +529,7 @@ def checkSqlInjection(place, parameter, value):
                             truePage, trueHeaders, trueCode = threadData.lastComparisonPage or "", threadData.lastComparisonHeaders, threadData.lastComparisonCode
                             trueRawResponse = "%s%s" % (trueHeaders, truePage)
 
-                            if trueResult and not(truePage == falsePage and not any((kb.nullConnection, conf.code))):
+                            if trueResult and not (truePage == falsePage and not any((kb.nullConnection, conf.code))):
                                 # Perform the test's False request
                                 falseResult = Request.queryPage(genCmpPayload(), place, raise404=False)
 
@@ -1586,8 +1586,7 @@ def checkConnection(suppressOutput=False):
     return True
 
 def checkInternet():
-    content = Request.getPage(url=CHECK_INTERNET_ADDRESS, checking=True)[0]
-    return CHECK_INTERNET_VALUE in (content or "")
+    return Request.getPage(url=CHECK_INTERNET_ADDRESS, checking=True)[2] == CHECK_INTERNET_CODE
 
 def setVerbosity():  # Cross-referenced function
     raise NotImplementedError

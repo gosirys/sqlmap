@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -161,6 +161,9 @@ class Response(object):
 
         response = _http_client.HTTPResponse(FakeSocket(altered))
         response.begin()
+
+        # NOTE: https://github.com/sqlmapproject/sqlmap/issues/5942
+        response.length = len(raw[raw.find(b"\r\n\r\n") + 4:])
 
         try:
             content = response.read()

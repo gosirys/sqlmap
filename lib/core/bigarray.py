@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -14,6 +14,7 @@ import itertools
 import os
 import sys
 import tempfile
+import threading
 import zlib
 
 from lib.core.compat import xrange
@@ -74,6 +75,7 @@ class BigArray(list):
         self.chunk_length = sys.maxsize
         self.cache = None
         self.filenames = set()
+        self._lock = threading.Lock()
         self._os_remove = os.remove
         self._size_counter = 0
 
@@ -95,33 +97,35 @@ class BigArray(list):
         return self
 
     def append(self, value):
-        self.chunks[-1].append(value)
+        with self._lock:
+            self.chunks[-1].append(value)
 
-        if self.chunk_length == sys.maxsize:
-            self._size_counter += _size_of(value)
-            if self._size_counter >= BIGARRAY_CHUNK_SIZE:
-                self.chunk_length = len(self.chunks[-1])
-                self._size_counter = None
+            if self.chunk_length == sys.maxsize:
+                self._size_counter += _size_of(value)
+                if self._size_counter >= BIGARRAY_CHUNK_SIZE:
+                    self.chunk_length = len(self.chunks[-1])
+                    self._size_counter = None
 
-        if len(self.chunks[-1]) >= self.chunk_length:
-            filename = self._dump(self.chunks[-1])
-            self.chunks[-1] = filename
-            self.chunks.append([])
+            if len(self.chunks[-1]) >= self.chunk_length:
+                filename = self._dump(self.chunks[-1])
+                self.chunks[-1] = filename
+                self.chunks.append([])
 
     def extend(self, value):
         for _ in value:
             self.append(_)
 
     def pop(self):
-        if len(self.chunks[-1]) < 1:
-            self.chunks.pop()
-            try:
-                with open(self.chunks[-1], "rb") as f:
-                    self.chunks[-1] = pickle.loads(zlib.decompress(f.read()))
-            except IOError as ex:
-                errMsg = "exception occurred while retrieving data "
-                errMsg += "from a temporary file ('%s')" % ex
-                raise SqlmapSystemException(errMsg)
+        with self._lock:
+            if not self.chunks[-1] and len(self.chunks) > 1:
+                self.chunks.pop()
+                try:
+                    with open(self.chunks[-1], "rb") as f:
+                        self.chunks[-1] = pickle.loads(zlib.decompress(f.read()))
+                except IOError as ex:
+                    errMsg = "exception occurred while retrieving data "
+                    errMsg += "from a temporary file ('%s')" % ex
+                    raise SqlmapSystemException(errMsg)
 
         return self.chunks[-1].pop()
 
@@ -131,6 +135,17 @@ class BigArray(list):
                 return index
 
         return ValueError, "%s is not in list" % value
+
+    def close(self):
+        while self.filenames:
+            filename = self.filenames.pop()
+            try:
+                self._os_remove(filename)
+            except OSError:
+                pass
+
+    def __del__(self):
+        self.close()
 
     def _dump(self, chunk):
         try:
@@ -149,6 +164,9 @@ class BigArray(list):
             raise SqlmapSystemException(errMsg)
 
     def _checkcache(self, index):
+        if self.cache is not None and not isinstance(self.cache, Cache):
+            self.cache = None
+
         if (self.cache and self.cache.index != index and self.cache.dirty):
             filename = self._dump(self.cache.data)
             self.chunks[self.cache.index] = filename
@@ -170,8 +188,12 @@ class BigArray(list):
         self.chunks, self.filenames = state
 
     def __getitem__(self, y):
+        length = len(self)
+        if length == 0:
+            raise IndexError("BigArray index out of range")
+
         while y < 0:
-            y += len(self)
+            y += length
 
         index = y // self.chunk_length
         offset = y % self.chunk_length

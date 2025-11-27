@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -68,7 +68,7 @@ class Fingerprint(GenericFingerprint):
         infoMsg = "testing %s" % DBMS.MIMERSQL
         logger.info(infoMsg)
 
-        result = inject.checkBooleanExpression("IRAND()>=0")
+        result = inject.checkBooleanExpression("IRAND() IS NOT NULL")
 
         if result:
             infoMsg = "confirming %s" % DBMS.MIMERSQL

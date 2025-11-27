@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -45,10 +45,15 @@ class Fingerprint(GenericFingerprint):
         # Reference: https://dev.mysql.com/doc/relnotes/mysql/<major>.<minor>/en/
 
         versions = (
+            (90300, 90302),  # MySQL 9.3
+            (90200, 90202),  # MySQL 9.2
+            (90100, 90102),  # MySQL 9.1
+            (90000, 90002),  # MySQL 9.0
+            (80400, 80406),  # MySQL 8.4
             (80300, 80302),  # MySQL 8.3
             (80200, 80202),  # MySQL 8.2
             (80100, 80102),  # MySQL 8.1
-            (80000, 80037),  # MySQL 8.0
+            (80000, 80043),  # MySQL 8.0
             (60000, 60014),  # MySQL 6.0
             (50700, 50745),  # MySQL 5.7
             (50600, 50652),  # MySQL 5.6
@@ -99,6 +104,10 @@ class Fingerprint(GenericFingerprint):
                 fork = FORK.DRIZZLE
             elif inject.checkBooleanExpression("@@VERSION_COMMENT LIKE '%Percona%'"):
                 fork = FORK.PERCONA
+            elif inject.checkBooleanExpression("@@VERSION_COMMENT LIKE '%Doris%'"):
+                fork = FORK.DORIS
+            elif inject.checkBooleanExpression("@@VERSION_COMMENT LIKE '%StarRocks%'"):
+                fork = FORK.STARROCKS
             elif inject.checkBooleanExpression("AURORA_VERSION() LIKE '%'"):            # Reference: https://aws.amazon.com/premiumsupport/knowledge-center/aurora-version-number/
                 fork = FORK.AURORA
             else:
@@ -184,7 +193,7 @@ class Fingerprint(GenericFingerprint):
             infoMsg = "confirming %s" % DBMS.MYSQL
             logger.info(infoMsg)
 
-            result = inject.checkBooleanExpression("SESSION_USER() LIKE USER()")
+            result = inject.checkBooleanExpression("COALESCE(SESSION_USER(),USER()) IS NOT NULL")
 
             if not result:
                 # Note: MemSQL doesn't support SESSION_USER()
@@ -204,8 +213,14 @@ class Fingerprint(GenericFingerprint):
 
             kb.data.has_information_schema = True
 
+            # Determine if it is MySQL >= 9.0.0
+            if inject.checkBooleanExpression("ISNULL(VECTOR_DIM(NULL))"):
+                Backend.setVersion(">= 9.0.0")
+                setDbms("%s 9" % DBMS.MYSQL)
+                self.getBanner()
+
             # Determine if it is MySQL >= 8.0.0
-            if inject.checkBooleanExpression("ISNULL(JSON_STORAGE_FREE(NULL))"):
+            elif inject.checkBooleanExpression("ISNULL(JSON_STORAGE_FREE(NULL))"):
                 Backend.setVersion(">= 8.0.0")
                 setDbms("%s 8" % DBMS.MYSQL)
                 self.getBanner()

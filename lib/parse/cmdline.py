@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -176,6 +176,12 @@ def cmdLineParser(argv=None):
 
         request.add_argument("--drop-set-cookie", dest="dropSetCookie", action="store_true",
             help="Ignore Set-Cookie header from response")
+
+        request.add_argument("--http1.0", dest="http10", action="store_true",
+            help="Use HTTP version 1.0 (old)")
+
+        request.add_argument("--http2", dest="http2", action="store_true",
+            help="Use HTTP version 2 (experimental)")
 
         request.add_argument("--mobile", dest="mobile", action="store_true",
             help="Imitate smartphone through HTTP User-Agent header")
@@ -404,6 +410,9 @@ def cmdLineParser(argv=None):
 
         techniques.add_argument("--time-sec", dest="timeSec", type=int,
             help="Seconds to delay the DBMS response (default %d)" % defaults.timeSec)
+
+        techniques.add_argument("--disable-stats", dest="disableStats", action="store_true",
+            help="Disable the statistical model for detecting the delay")
 
         techniques.add_argument("--union-cols", dest="uCols",
             help="Range of columns to test for UNION query SQL injection")
@@ -772,6 +781,9 @@ def cmdLineParser(argv=None):
         miscellaneous.add_argument("--no-logging", dest="noLogging", action="store_true",
             help="Disable logging to a file")
 
+        miscellaneous.add_argument("--no-truncate", dest="noTruncate", action="store_true",
+            help="Disable console output truncation (e.g. long entr...)")
+
         miscellaneous.add_argument("--offline", dest="offline", action="store_true",
             help="Work in offline mode (only use session data)")
 
@@ -819,9 +831,6 @@ def cmdLineParser(argv=None):
             help=SUPPRESS)
 
         parser.add_argument("--disable-precon", dest="disablePrecon", action="store_true",
-            help=SUPPRESS)
-
-        parser.add_argument("--disable-stats", dest="disableStats", action="store_true",
             help=SUPPRESS)
 
         parser.add_argument("--profile", dest="profile", action="store_true",
@@ -1007,6 +1016,10 @@ def cmdLineParser(argv=None):
                 argv[i] = ""
             elif argv[i] in DEPRECATED_OPTIONS:
                 argv[i] = ""
+            elif argv[i] in ("-s", "--silent"):
+                if i + 1 < len(argv) and argv[i + 1].startswith('-') or i + 1 == len(argv):
+                    argv[i] = ""
+                    conf.verbose = 0
             elif argv[i].startswith("--data-raw"):
                 argv[i] = argv[i].replace("--data-raw", "--data", 1)
             elif argv[i].startswith("--auth-creds"):
@@ -1015,7 +1028,6 @@ def cmdLineParser(argv=None):
                 argv[i] = argv[i].replace("--drop-cookie", "--drop-set-cookie", 1)
             elif re.search(r"\A--tamper[^=\s]", argv[i]):
                 argv[i] = ""
-                continue
             elif re.search(r"\A(--(tamper|ignore-code|skip))(?!-)", argv[i]):
                 key = re.search(r"\-?\-(\w+)\b", argv[i]).group(1)
                 index = auxIndexes.get(key, None)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -30,6 +30,7 @@ optDict = {
         "liveCookies": "string",
         "loadCookies": "string",
         "dropSetCookie": "boolean",
+        "http2": "boolean",
         "agent": "string",
         "mobile": "boolean",
         "randomAgent": "boolean",
@@ -252,6 +253,7 @@ optDict = {
         "disableHashing": "boolean",
         "listTampers": "boolean",
         "noLogging": "boolean",
+        "noTruncate": "boolean",
         "offline": "boolean",
         "purge": "boolean",
         "resultsFile": "string",

